@@ -11,8 +11,9 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sklearn.linear_model import LassoCV, LassoLarsCV, LassoLarsIC
 from sklearn import datasets
+from sklearn.linear_model import LassoCV, LassoLarsCV, LassoLarsIC
+
 
 diabetes = datasets.load_diabetes()
 #print(diabetes)

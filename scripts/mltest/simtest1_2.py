@@ -17,11 +17,12 @@ from sklearn import preprocessing as prep
 from sklearn.decomposition import KernelPCA
 
 #toy data
-X = pd.read_csv('../../data/simulated/mvnsim/mvnsim005.csv', delimiter=',', header=0)
+X = pd.read_csv('../../data/simulated/mvnsim/mvnsim007.csv', delimiter=',', header=0).as_matrix()
 
 #categories
-y = pd.read_csv('../../data/simulated/mvnsim/target005.csv', delimiter=',', header=0)
+y = pd.read_csv('../../data/simulated/mvnsim/target007.csv', delimiter=',', header=0)
 y = y[y.columns[1]]
+
 #print(X)
 #plt.figure(figsize=(8,6))
 #plt.scatter(X[:, 0], X[:, 1])
@@ -29,8 +30,40 @@ y = y[y.columns[1]]
 
 #print(y)
 
+#Plot input data
+plt.figure(figsize=(8,6))
 
 
+
+for i in range(len(X)):
+    #for category 1 samples
+    if y[i] == 0:
+        plt.scatter(X[y==0, 0], X[y==0, 1],
+                    color ='red',
+                    marker='s',     #square marker
+                    alpha=0.5,
+                    )
+    #for category 2 examples    
+    elif y[i] == 1:
+        plt.scatter(X[y==0, 0], X[y==0, 1],
+                    color='blue',
+                    marker='^',     #triangle marker
+                    alpha=0.5,
+                    )
+
+
+'''
+plt.scatter(X[:,0],
+            X[:,1],
+            color ='red',
+            marker='s',     #square marker
+            alpha=0.5,
+            )
+'''
+plt.show()
+plt.close()
+
+'''
 #plot graph
 lin_kpca = KernelPCA(n_components=2, kernel='linear')
 X_lin_kpca = lin_kpca.fit_transform(X)
@@ -45,20 +78,22 @@ for i in range(len(y)):
     #for category 1 samples
     if y[i] == 0:
         plt.scatter(X_lin_kpca[:, 0][i],
-        X_lin_kpca[:, 1][i],
-        color ='red',
-        marker='s',     #square marker
-        alpha=0.5,
-        )
+                    X_lin_kpca[:, 1][i],
+                    color ='red',
+                    marker='s',     #square marker
+                    alpha=0.5,
+                    )
+        
     #for category 2 examples    
     elif y[i] == 1:
         plt.scatter(X_lin_kpca[:, 0][i],
-        X_lin_kpca[:, 1][i],
-        color='blue',
-        marker='^',     #triangle marker
-        alpha=0.5,
-        )
+                    X_lin_kpca[:, 1][i],
+                    color='blue',
+                    marker='^',     #triangle marker
+                    alpha=0.5,
+                    )
 
 
 plt.show()
 plt.close()
+'''
