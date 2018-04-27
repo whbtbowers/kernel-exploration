@@ -48,7 +48,7 @@ from scipy import interp
 StartTime = time.time()
 
 # Name of script to trace where images came from
-scriptname = 'gs_tune_1'
+scriptname = 'gs_tune_1_2'
 
 #Select current toy dataset
 dataset = '013'
@@ -87,7 +87,7 @@ mean_aucs = dict()
 
 # hyperparameters to test
 k_list = list(range(5, 31, 5))
-gamma_list = [0.0000002, 0.000002, 0.00002, 0.0002, 0.002, 0.02, 0.2]
+gamma_list = [2e-7, 0.000002, 0.00002, 0.0002, 0.002, 0.02, 0.2, 2.0]
 
 # Single model chosen for now
 svc = SVC(kernel='linear', probability=True)
@@ -215,9 +215,9 @@ surf = ax.plot_surface(X,
 # Add a color bar which maps values to colors.
 fig.colorbar(surf, shrink=0.5, aspect=5)
 
-ax.set_xlabel('$\gamma$', fontsize=10)
-ax.set_ylabel('Number of folds in cross-validation', fontsize=10)
-ax.set_zlabel('Mean area under ROC curve', fontsize=10)
+ax.set_xlabel('$\gamma$', fontsize=20)
+ax.set_ylabel('Number of folds in cross-validation', fontsize=20)
+ax.set_zlabel('Mean area under ROC curve', fontsize=20)
 
 plt.title('Change in area under ROC curve with varying gamma in RBF KPCA and varying K in k-fold cross-validation')
 

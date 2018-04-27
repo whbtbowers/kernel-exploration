@@ -64,7 +64,7 @@ def plot_scatter(x, y, title, gamma=None, x_label='x coordinate', y_label='y coo
 StartTime = time.time()
 
 # Name of script to trace where images came from
-scriptname = 'hp_tune1'
+scriptname = 'hp_tune_1'
 
 #Select current toy dataset
 dataset = '013'

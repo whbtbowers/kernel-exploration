@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import numpy as np
+import os
 import pandas as pd
 import seaborn as sns
 import plotly.plotly as py
@@ -48,10 +49,16 @@ from scipy import interp
 StartTime = time.time()
 
 # Name of script to trace where images came from
-scriptname = 'gs_tune_1'
+scriptname = 'gs_tune_1_3'
 
 #Select current toy dataset
 dataset = '013'
+
+#Create directory if directory does not exist
+filepath = '../../figs/out/%s/%s/' % (scriptname, dataset)
+
+if not os.path.exists(filepath):
+    os.makedirs(filepath)
 
 #Import toy data and target
 X = pd.read_csv('../../data/simulated/mvnsim/mvnsim' + dataset + '.csv', sep=',', header=0, index_col=0).as_matrix()
@@ -64,7 +71,7 @@ plot_scatter(X,
              x_label='x coordinate', 
              y_label='y coordinate',
              output='save',
-             path='../../figs/out/%s/%s/initial.png' % (scriptname, dataset)
+             path='%sinitial.png' % filepath
              )
 
 
@@ -79,7 +86,7 @@ plot_scatter(X_scaled,
              x_label='x coordinate',
              y_label='y coordinate',             
              output='save',
-             path='../../figs/out/%s/%s/scaled.png' % (scriptname, dataset)
+             path='%sscaled.png' % filepath
              )
 
 # Array for all areas under ROC curve
@@ -87,7 +94,7 @@ mean_aucs = dict()
 
 # hyperparameters to test
 k_list = list(range(5, 31, 5))
-gamma_list = [0.0000002, 0.000002, 0.00002, 0.0002, 0.002, 0.02, 0.2]
+gamma_list = [2e-10, 2e-9, 2e-8, 2e-7, 2e-6, 2e-5, 2e-4]#, 2e-3, 2e-2, 0.2, 2.0]
 
 # Single model chosen for now
 svc = SVC(kernel='linear', probability=True)
@@ -111,7 +118,7 @@ for gamma in gamma_list:
                  x_label='Principal component 1',
                  y_label='Principal component 2',
                  output='save',
-                 path='../../figs/out/%s/%s/rbf_kpca_gamma%s.png' % (scriptname, dataset, gamma)
+                 path='%srbf_kpca_gamma%s.png' % (filepath, gamma)
                  )
     
     # Declare list of mean ROC AUC for each value of gamma
@@ -176,7 +183,7 @@ for gamma in gamma_list:
                 #plt.title('Receiver operating characteristic (Using RBF KPCA, γ = %s, k = %s)' % (gamma, k))
                 #plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
                 #plt.show()
-                #plt.savefig('../../figs/out/%s/%s/roc_rbf_kpca_gamma%s.png' % (scriptname, dataset, gamma))
+                #plt.savefig('%sroc_rbf_kpca_gamma%s.png' % (filepath, gamma))
                 #plt.close()
         
 #print(mean_aucs.keys())
@@ -215,9 +222,9 @@ surf = ax.plot_surface(X,
 # Add a color bar which maps values to colors.
 fig.colorbar(surf, shrink=0.5, aspect=5)
 
-ax.set_xlabel('$\gamma$', fontsize=10)
-ax.set_ylabel('Number of folds in cross-validation', fontsize=10)
-ax.set_zlabel('Mean area under ROC curve', fontsize=10)
+ax.set_xlabel('$\gamma$', fontsize=20)
+ax.set_ylabel('Number of folds in cross-validation', fontsize=20)
+ax.set_zlabel('Mean area under ROC curve', fontsize=20)
 
 plt.title('Change in area under ROC curve with varying gamma in RBF KPCA and varying K in k-fold cross-validation')
 
