@@ -10,14 +10,11 @@ import matplotlib.pyplot as plt
 import numpy.random as rnd
 import numpy as np
 import pandas as pd
-'''
+
 # To label simulation
 simname = input('Input simulation name: ')
 simname = str(simname)
-'''
-# Initiate array for target data
 
-target = [['0'*50 + '1'*50]]
 
 # generating non-discriminatory variables
 
@@ -51,7 +48,7 @@ dmvn2 = rnd.multivariate_normal(dmean2, dcov2, (dnum_rows2, dnum_cols2))
 
 # Plot data
 # nondiscriminate data
-plt.scatter(nd_mvn[0,:],
+nd = plt.scatter(nd_mvn[0,:],
             nd_mvn[1,:],
             c='red',
             marker='s',     #square marker
@@ -59,7 +56,7 @@ plt.scatter(nd_mvn[0,:],
             ) 
 
 # discriminate data group 1
-plt.scatter(dmvn1[0,:],
+dis1 = plt.scatter(dmvn1[0,:],
             dmvn1[1,:],
             c='green',
             marker='^',     #triangle marker
@@ -67,15 +64,20 @@ plt.scatter(dmvn1[0,:],
             )  
 
 # discriminate data group 1
-plt.scatter(dmvn2[0,:],
+dis2 = plt.scatter(dmvn2[0,:],
             dmvn1[1,:],
             color='blue',
             marker='o',     #circle marker
             alpha=0.5,
             )  
 
+plt.title('Random multivariate normal simulated dataset ' + simname)
+plt.legend([nd, dis1, dis2], ['Nondiscriminate data', 'Discriminate variable set 1', 'Discriminate variable set 2'])
 
-plt.show()
+
+#plt.show()
+plt.savefig('../../figs/mvnfigs/mvngroups' + simname + '.png')
+plt.close()
 
 #combine two half-columns of discriminatory variables into full columns
 dvars = np.vstack((dmvn1, dmvn2))
@@ -93,14 +95,21 @@ for i in range(500):
 mvn_sim_df = pd.DataFrame.from_records(mvn_sim)
 #print(mvn_sim_df)
 
-'''
+#create target values for classification
+target = []
+    
+for i in range(50):
+    target.append('0')
+    
+for i in range(50):
+    target.append('1')
+tagethead = ['target']
+target = np.array(target)
+targetdf = pd.DataFrame.from_records(target)
+target_csv_path = '../../data/simulated/mvnsim/target' + simname + '.csv'
+targetdf.to_csv(path_or_buf=target_csv_path, sep=',', header='targethead')
+
 #convert dataframe to CSV file to be used by other scripts
 mvnsim_csv_path = '../../data/simulated/mvnsim/mvnsim' + simname + '.csv'
 mvn_sim_df.to_csv(path_or_buf=mvnsim_csv_path, sep=',', header=heads)
 
-#create CSV for target values
-target = np.array(target)
-targetdf = pd.DataFrame.from_records(target)
-target_csv_path = '../../data/simulated/mvnsim/target' + simname + '.csv'
-targetdf.to_csv(path_or_buf=target_csv_path, sep=',', header='target')
-'''

@@ -1,8 +1,8 @@
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Mon Apr 16 19:06:18 2018
-
 @author: whtbowers
 """
 
@@ -79,11 +79,18 @@ for i in range(500):
     heads.append('var_' + str(i+1))
 
 #create target values for classification
-target = [['0'*50 + '1'*50]]
+target = []
+    
+for i in range(50):
+    target.append('0')
+    
+for i in range(50):
+    target.append('1')
+tagethead = ['target']
 target = np.array(target)
 targetdf = pd.DataFrame.from_records(target)
 target_csv_path = '../../data/simulated/mvnsim/target' + simname + '.csv'
-targetdf.to_csv(path_or_buf=target_csv_path, sep=',', header='target')
+targetdf.to_csv(path_or_buf=target_csv_path, sep=',', header='targethead')
 
 #convert dataframe to CSV file to be used by other scripts
 mvnsim_csv_path = '../../data/simulated/mvnsim/mvnsim' + simname + '.csv'

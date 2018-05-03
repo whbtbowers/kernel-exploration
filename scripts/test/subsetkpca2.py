@@ -1,20 +1,24 @@
 """
-KPCA using 3D dataset based off Sebastian Raschka swiss roll tutorial
+KPCA using method in Sebastian Rascka tutorial
 """
 
 import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+
 from scipy.spatial.distance import pdist, squareform
 from scipy import exp
 from scipy.linalg import eigh
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import KernelPCA
+from sklearn.datasets import make_circles
 from sklearn.decomposition import PCA
-from sklearn.datasets.samples_generator import make_swiss_roll
-from mpl_toolkits.mplot3d import Axes3D
+plt.ion()
+
 
 def stepwise_kpca(X, gamma, n_components):
-    '''
+    """
     Implementation of a RBF kernel PCA.
 
     Arguments:
@@ -23,7 +27,7 @@ def stepwise_kpca(X, gamma, n_components):
         gamma: A free parameter (coefficient) for the RBF kernel.
         n_components: The number of components to be returned.
 
-    '''
+    """
     # Calculating the squared Euclidean distances for every pair of points
     # in the MxN dimensional dataset.
     sq_dists = pdist(X, 'sqeuclidean')
@@ -48,70 +52,81 @@ def stepwise_kpca(X, gamma, n_components):
 
     return X_pc
 
-#use a random 100 subset file
+#import subset of initial csv
 inp_csv = pd.read_csv('../../data/sample/rand100subset1.csv', delimiter=',', header=0)
 
-#chosen dimensions - hard coded for now, easy to soft code later.
-# blood glucose
+#plot based on vector
+#input vector (eg glucose & bmi)
+#category (eg sex)
+#out_type - output type, 'show' or 'save'
+
+#chosen dimensions
 glucose = inp_csv['glucose']
-# sex (given as 1 or 2)
 sex = inp_csv['sex']
-# BMI
 bmi = inp_csv['bmi']
-# weight
-weight = inp_csv['weight']
 
-col_by_sex = []
 
-for i in range(len(sex)):
-    if sex[i] == 1:
-        col_by_sex.append('red')
-    if sex[i] == 2:
-        col_by_sex.append('blue')
-
-#print(col_by_sex)
-
-#create vector
+#Create empty array to add vectors to
 data = []
 
 for i in range(len(bmi)):
 
     #create sample vector
     xi = []
-    xi.append(glucose[i])
-    xi.append(weight[i])
     xi.append(bmi[i])
+    xi.append(glucose[i])
 
     #Append sample vector to array
     data.append(xi)
 
 #simple way to convert to numpy array
 X = np.array(data)
+print(np.cov(X))
 
-print(X[:, 0] )
-print(X[:, 1])
-print(X[:, 2])
-#plot initial data
-fig = plt.figure(figsize=(7,7))
-ax = fig.add_subplot(111, projection='3d')
-ax.scatter(X[:, 0], X[:, 1], X[:, 2], c=col_by_sex)
+#set initial gamma
+gamma = 100
 
-#ax.legend()
+#set interval of gamma increase
+interval = 1.0
 
-plt.title('Glucose vs weight vs bmi by sex')
-ax.set_xlabel('Blood glucose concentration')
-ax.set_ylabel('weight ')
-ax.set_zlabel('BMI')
+gamma_max = 200
+'''
+while gamma <= gamma_max:
+
+    print('gamma: ' + str(gamma))
+
+    X_kpca = stepwise_kpca(X, gamma=gamma, n_components=2)
+
+    #Graph after kpca
+    #generate graph from matrix
+    for i in range(len(X)):
+        if sex[i] == 1:
+            #Sex 1 glucose v BMI
+            sex1 = plt.scatter(X_kpca[i][0], #bmi
+                X_kpca[i][1],    #glucose
+                color ='red',
+                marker='o',     #circle marker
+                alpha=0.5,
+                )
+        elif sex[i] == 2:
+            sex2 = plt.scatter(X_kpca[i][0], #bmi
+                X_kpca[i][1],    #glucose
+                color='blue',
+                marker='^',     #triangle marker
+                alpha=0.5,
+                )
+
+    plt.title('BMI vs glucose by sex after kernel PCA (gamma=' + str(gamma) + ')')
+    plt.ylabel('Serum glucose concentration')
+    plt.xlabel('BMI')
+    plt.legend([sex1, sex2], ['Sex 1', 'Sex 2'])
+
+    plt.show()
+    plt.pause(0.005)
+    plt.clf()
+    #plt.savefig('../../figs/bivariate/subsetkpca1_4_gamma' + str(gamma) + '.png')
+
+    gamma += interval
+
 plt.show()
-
-#2-component linear PCA
-scikit_pca = PCA(n_components=2)
-X_spca = scikit_pca.fit_transform(X)
-
-plt.figure(figsize=(8,6))
-plt.scatter(X_spca[:, 0], X_spca[:, 1], c=col_by_sex)
-
-plt.title('First 2 principal components after Linear PCA')
-plt.xlabel('PC1')
-plt.ylabel('PC2')
-plt.show()
+'''

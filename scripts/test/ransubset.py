@@ -23,4 +23,4 @@ def csv_subsetter(outp_filename,inp_csv_path, numrowswanted):
     getrows.to_csv(path_or_buf=outp_filename, header=True, sep=',')
 
 # Create subset table of 100 random rows
-csv_subsetter('../sampdata/rand100subset3.csv', '../data/MESA_Clinical_data_(full_COMBI-BIO).xlsx - COMBI-BIO Merged Clinical data.csv', 100)
+csv_subsetter('rand100subset2.csv', '../../data/MESA_Clinical_data_(full_COMBI-BIO).xlsx - COMBI-BIO Merged Clinical data.csv', 100)

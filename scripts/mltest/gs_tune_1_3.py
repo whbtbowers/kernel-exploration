@@ -28,7 +28,7 @@ import plotly.plotly as py
 import plotly.tools as tls
 tls.set_credentials_file(username='whtbowers', api_key='skkoCIGowBQdx7ZTJMzM')
 
-from p2funcs import plot_scatter
+from p2funcs import plot_scatter, target_split, distribution_boxplot
 
 from sklearn.model_selection import StratifiedKFold, cross_val_score, KFold, cross_val_predict, cross_validate, train_test_split
 from sklearn.metrics import accuracy_score, roc_curve, auc
@@ -52,7 +52,7 @@ StartTime = time.time()
 scriptname = 'gs_tune_1_3'
 
 #Select current toy dataset
-dataset = '013'
+dataset = '018'
 
 #Create directory if directory does not exist
 filepath = '../../figs/out/%s/%s/' % (scriptname, dataset)
@@ -70,8 +70,9 @@ plot_scatter(X,
              'Initial data', 
              x_label='x coordinate', 
              y_label='y coordinate',
-             output='save',
-             path='%sinitial.png' % filepath
+             #output='save',
+             #path='%sinitial.png' % filepath
+             output = 'show',
              )
 
 
@@ -84,17 +85,23 @@ X_scaled = scale(X)
 plot_scatter(X_scaled,
              y, 'Scaled data',
              x_label='x coordinate',
-             y_label='y coordinate',             
-             output='save',
-             path='%sscaled.png' % filepath
+             y_label='y coordinate',
+             output='show'                             
+             #output='save',
+             #path='%sscaled.png' % filepath
              )
 
 # Array for all areas under ROC curve
 mean_aucs = dict()
 
 # hyperparameters to test
-k_list = list(range(5, 31, 5))
+#k_list = list(range(5, 31, 5))
 gamma_list = [2e-10, 2e-9, 2e-8, 2e-7, 2e-6, 2e-5, 2e-4]#, 2e-3, 2e-2, 0.2, 2.0]
+
+# Updatable scalar values to try to find optimal hyperparameters
+max_mean_auc = 0
+opt_gamma = 0
+opt_k = 0
 
 # Single model chosen for now
 svc = SVC(kernel='linear', probability=True)
@@ -117,8 +124,8 @@ for gamma in gamma_list:
                  gamma=gamma,
                  x_label='Principal component 1',
                  y_label='Principal component 2',
-                 output='save',
-                 path='%srbf_kpca_gamma%s.png' % (filepath, gamma)
+                 #output='save',
+                 #path='%srbf_kpca_gamma%s.png' % (filepath, gamma)
                  )
     
     # Declare list of mean ROC AUC for each value of gamma
@@ -132,9 +139,7 @@ for gamma in gamma_list:
         
                 cv = StratifiedKFold(n_splits=k)
                 
-                #print('Peforming %s-fold cross-validated SVC after RBF KPCA (γ = %s)' % (k, gamma))
-                
-                #plt.figure(figsize=(10, 7))
+                print('Peforming %s-fold cross-validated SVC after RBF KPCA (γ = %s)' % (k, gamma))
 
                 
                 # To count number of folds
@@ -151,13 +156,9 @@ for gamma in gamma_list:
                     tprs[-1][0] = 0.0
                     roc_auc = auc(fpr, tpr)
                     aucs.append(roc_auc)
-                    #plt.plot(fpr, tpr, lw=1, alpha=0.3,
-                    #         label='ROC fold %d (AUC = %0.2f)' % (i+1, roc_auc))
                 
                     i += 1
-                        
-                #plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r',
-                #         label='Luck', alpha=.8)
+
                 
                 #Calculate means
                 mean_tpr = np.mean(tprs, axis=0)
@@ -166,29 +167,21 @@ for gamma in gamma_list:
                 mean_auc_row.append(mean_auc)
                 
                 std_auc = np.std(aucs)
-                #plt.plot(mean_fpr, mean_tpr, color='b',
-                #         label=r'Mean ROC (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc),
-                #         lw=2, alpha=.8)
                 
                 std_tpr = np.std(tprs, axis=0)
                 tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
                 tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
-                #plt.fill_between(mean_fpr, tprs_lower, tprs_upper, color='grey', alpha=.2,
-                #                 label=r'$\pm$ 1 std. dev.')
-                
-                #plt.xlim([-0.05, 1.05])
-                #plt.ylim([-0.05, 1.05])
-                #plt.xlabel('False Positive Rate')
-                #plt.ylabel('True Positive Rate')
-                #plt.title('Receiver operating characteristic (Using RBF KPCA, γ = %s, k = %s)' % (gamma, k))
-                #plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-                #plt.show()
-                #plt.savefig('%sroc_rbf_kpca_gamma%s.png' % (filepath, gamma))
-                #plt.close()
-        
-#print(mean_aucs.keys())
 
-# Plot surface
+
+#Update values to display optimal hyperparameters as found by search
+for i in gamma_list:
+    for j in range(len(k_list)):
+        if mean_aucs[i][j] > max_mean_auc:
+            max_mean_auc = mean_aucs[i][j]
+            opt_gamma = i
+            opt_k = k_list[j]
+                
+# Plot surface                
 ma_array = []
 
 for i in gamma_list:
@@ -208,6 +201,10 @@ print('\nShape of gamma list:' + str(X.shape) + '\nDimensions in gamma list: ' +
 print(X)
 print('\nShape of k list:' + str(Y.shape) + '\nDimensions in k list: ' + str(Y.ndim))
 print(Y)
+
+#Show values identified as optimal:
+print("\nGreatest area under curve from given hyperparameters is %s" % max_mean_auc)
+print("\nGreatest area under curve gained from γ of %s, K of %s" % (opt_gamma, opt_k ))
 
 fig = plt.figure()
 ax = fig.gca(projection='3d')
