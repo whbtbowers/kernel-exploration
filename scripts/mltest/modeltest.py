@@ -1,13 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Apr 27 14:32:26 2018
-
-@author: whb17
-
-
-"""
-
 import time
 import os
 import matplotlib.pyplot as plt
@@ -16,7 +6,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 sns.set(style="ticks")
-#sns.set(style='darkgrid')
 
 import plotly.plotly as py
 import plotly.tools as tls
@@ -29,6 +18,59 @@ from sklearn.model_selection import StratifiedKFold, cross_val_score, KFold, cro
 from sklearn.metrics import accuracy_score, roc_curve, auc
 from sklearn.preprocessing import scale, normalize
 from sklearn.decomposition import KernelPCA, PCA
+from sklearn.cross_decomposition import PLSRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.svm import SVC
+from scipy import interp
+
+#To show runtime of script
+StartTime = time.time()
+
+# Name of script to trace where images came from
+scriptname = 'modeltest.py'
+
+#Select current toy dataset
+dataset = '022'
+
+#Create directory if directory does not exist
+filepath = '../../figs/out/%s/%s/' % (scriptname, dataset)
+
+if not os.path.exists(filepath):
+    os.makedirs(filepath)
+
+#Import toy data and target
+X = pd.read_csv('../../data/simulated/mvnsim/mvnsim' + dataset + '.csv', sep=',', header=0, index_col=0)
+y = np.load('../../data/simulated/mvnsim/target' + dataset + '.npy')
+
+
+#Calculate and display time taken or script to run
+EndTime = (time.time() - StartTime)
+import time
+import os
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import numpy as np
+import pandas as pd
+import seaborn as sns
+sns.set(style="ticks")
+
+import plotly.plotly as py
+import plotly.tools as tls
+tls.set_credentials_file(username='whtbowers', api_key='skkoCIGowBQdx7ZTJMzM')
+
+from p2funcs import plot_scatter, target_split, distribution_boxplot
+
+
+from sklearn.model_selection import StratifiedKFold, cross_val_score, KFold, cross_val_predict, cross_validate, train_test_split
+from sklearn.metrics import accuracy_score, roc_curve, auc
+from sklearn.preprocessing import scale, normalize
+from sklearn.decomposition import KernelPCA, PCA
+from sklearn.cross_decomposition import PLSRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
@@ -43,10 +85,10 @@ from scipy import interp
 StartTime = time.time()
 
 # Name of script to trace where images came from
-scriptname = 'roc_kpca1_6'
+scriptname = 'modeltest.py'
 
 #Select current toy dataset
-dataset = '024'
+dataset = '018'
 
 #Create directory if directory does not exist
 filepath = '../../figs/out/%s/%s/' % (scriptname, dataset)
@@ -117,17 +159,11 @@ kpcas.append(('RBF K', 'rbf_k',KernelPCA(n_components=2, kernel='rbf', gamma=gam
 
 models = []
 
-models.append(('SVC', SVC(kernel='linear', probability=True)))
-
+models.append(('Linear SVC', 'lin_svc', SVC(kernel='linear', probability=True)))
+models.append(('RBF Kernel SVC','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
+#models.append(('PLS', PLSRegression())) # Scale=False as data already scaled.
 
 cv = StratifiedKFold(n_splits=10, random_state=10)
-
-
-tprs = []
-aucs = []
-mean_fpr = np.linspace(0, 1, 100)
-
-
 
 # Declare KPCA kernels deployed
 
@@ -156,17 +192,24 @@ for kernel, abbreviation, kpca in kpcas:
 
     # Declare names of models deployed
     mdl_names = []
-    plt.figure(figsize=(15, 9))
+    
 
-    for name, model in models:
-
+    for model_name, model_abv, model in models:
+        
+        tprs = []
+        aucs = []
+        mean_fpr = np.linspace(0, 1, 100)
+        
         mdl_names.append(name)
         print('\nPerforming ' + name + ' with ' + kernel + 'PCA')
         #print(mdl_names)
 
         # To count number of folds
         i = 0
-
+        
+        #Initiate plot
+        plt.figure(figsize=(15, 9))
+        
         for train, test in cv.split(X_kpca, y):
 
             probas_ = model.fit(X_kpca[train], y[train]).predict_proba(X_kpca[test])
@@ -204,12 +247,14 @@ for kernel, abbreviation, kpca in kpcas:
         plt.ylim([-0.05, 1.05])
         plt.xlabel('False Positive Rate')
         plt.ylabel('True Positive Rate')
-        plt.title('Receiver operating characteristic (Using %sPCA, γ = %s)' % (kernel, gamma))
-        plt.legend(loc="lower right")
+        plt.title('Receiver operating characteristic (Using %sPCA with %s, γ = %s)' % (kernel, model_name, gamma))
+        plt.legend()#bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+        #plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+        #plt.legend('lower right')
         #plt.show()
-        plt.savefig('../../figs/out/%s/%s/roc_%spca_gamma%s.png' % (scriptname, dataset, abbreviation, gamma))
+        plt.savefig('../../figs/out/%s/%s/roc_%spca_%s_gamma%s.png' % (scriptname, dataset, abbreviation, model_abv, gamma))
         plt.close()
 
 #Calculate and display time taken or script to run
 EndTime = (time.time() - StartTime)
-print('\nTime taken for script to run is %.2f seconds\n' % EndTime)
+print("\nTime taken for script to run is %.2f seconds\n" % EndTime)

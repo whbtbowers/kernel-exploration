@@ -1,0 +1,232 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon May  7 09:59:07 2018
+
+@author: whb17
+"""
+
+import datetime
+import time
+import os
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import numpy as np
+import pandas as pd
+
+import plotly.plotly as py
+import plotly.tools as tls
+tls.set_credentials_file(username='whtbowers', api_key='skkoCIGowBQdx7ZTJMzM')
+
+#from p2funcs import plot_scatter, target_split, distribution_boxplot
+
+
+from sklearn.model_selection import StratifiedKFold, cross_val_score, KFold, cross_val_predict, cross_validate, train_test_split
+from sklearn.metrics import accuracy_score, roc_curve, auc
+from sklearn.preprocessing import scale, normalize
+from sklearn.decomposition import KernelPCA, PCA
+from sklearn.cross_decomposition import PLSRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.svm import SVC
+from scipy import interp
+
+
+#To show runtime of script
+StartTime = time.time()
+
+# Time to differentiate images
+now = datetime.datetime.now()
+nowdate = now.strftime("%Y-%m-%d")
+nowtime = now.strftime("%H-%M")
+
+def misclassification_rate(y_predicted, y_target):
+    
+    if len(y_predicted) != len(y_target):
+        print('!!! PREDICTION AND TARGET INPUT ARRAYS ARE NOT OF EQUAL LENGTH; RETURNED RATE MAY BE INACCURATE !!!')
+    
+    # Initiate counter
+    misclass_count = 0
+    
+    for i in range(len(y_predicted)):
+        if y_predicted[i] == y_target[i]:
+            misclass_count += 1
+            
+    misclass_rate = misclass_count / len(y_predicted)
+    
+    return(misclass_rate)
+
+# Time to differentiate images
+now = datetime.datetime.now()
+nowdate = now.strftime("%Y-%m-%d")
+nowtime = now.strftime("%H-%M")
+# Name of script to trace where images came from
+scriptname = 'knn_test'
+
+#Select current toy dataset
+#dataset = '018'
+
+#List of toy datasets to test
+dataset_list = ['017', '018', '019', '020', '021', '022', '023', '024']
+#dataset_list = ['021']
+
+#number of neigbours in knn
+k_list = list(range(1, 51))
+
+for dataset in dataset_list:
+    
+    print('\nRunning %s with dataset %s:' % (scriptname, dataset))
+    
+    #Create directory if directory does not exist
+    filepath = '../../figs/out/%s/%s/' % (scriptname, nowdate)
+    
+    if not os.path.exists(filepath):
+        os.makedirs(filepath)
+    
+    #Import toy data and target
+    X = pd.read_csv('../../data/simulated/mvnsim/mvnsim' + dataset + '.csv', sep=',', header=0, index_col=0)
+    y = np.load('../../data/simulated/mvnsim/target' + dataset + '.npy')
+    
+        ## PREPROCESSING ##
+    
+    #Scale initial data to centre data
+    
+    X_scaled = scale(X)    
+    
+    #Initiate KPCAwith various kernels
+    
+    # As I'm using 500 variables, 0.002 is the default gamma (1/n_variables)
+    # I only explicitly state it at this point so I can display it on graphs
+    gamma = 0.002
+    
+    kpcas = []
+    
+    #Use standard PCA for comparison
+    
+    #kpcas.append(('standard ', 'std_', PCA(n_components=2)))
+    
+    #Linear kernal has no need for gamma
+    #kpcas.append(('Linear K', 'lin_k', KernelPCA(n_components=2, kernel='linear')))
+    kpcas.append(('RBF K', 'rbf_k',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
+    
+    n_kpcas = len(kpcas)
+    
+    models = []
+    
+    for k in k_list:
+    
+        models.append(('K-Nearest Neighbour (k = %s)' % k, 'knn', KNeighborsClassifier(n_neighbors=k)))
+        
+    n_models = len(models)    
+    
+    folds = 10
+        
+    cv = StratifiedKFold(n_splits=folds, random_state=10)
+    
+    # Declare KPCA kernels deployed
+    
+    kpca_kernels = []
+        
+    for kernel, abbreviation, kpca in kpcas:
+    
+        X_kpca = kpca.fit_transform(X_scaled)    
+  
+        kpca_kernels.append(kernel)
+        
+        # Least of mean AUC for each value of k
+        mean_aucs = []
+        
+        # Declare names of models deployed
+        mdl_names = []        
+    
+        for model_name, model_abv, model in models:
+            
+            mdl_names.append(model_name)
+            #print('\nPerforming ' + model_name + ' after ' + kernel + 'PCA')
+            #print(mdl_names)
+    
+            # To count number of folds
+            i = 0
+            
+            
+            
+            tprs = []
+            aucs = []
+            mean_fpr = np.linspace(0, 1, 100)
+            
+            #Initiate plot
+            #fig = plt.figure(figsize=(15, 9))
+                                
+            for train, test in cv.split(X_kpca, y):
+    
+                probas_ = model.fit(X_kpca[train], y[train]).predict_proba(X_kpca[test])
+    
+               # Compute ROC curve and area under it
+                fpr, tpr, thresholds = roc_curve(y[test], probas_[:, 1])
+                tprs.append(interp(mean_fpr, fpr, tpr))
+                tprs[-1][0] = 0.0
+                roc_auc = auc(fpr, tpr)
+                aucs.append(roc_auc)
+    
+                i += 1
+    
+            #Calculate means
+            mean_tpr = np.mean(tprs, axis=0)
+            mean_tpr[-1] = 1.0
+            mean_auc = auc(mean_fpr, mean_tpr)
+            mean_aucs.append(mean_auc)
+
+            std_auc = np.std(aucs)
+
+            std_tpr = np.std(tprs, axis=0)
+            tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
+            tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
+       
+            
+            # Display mean roc auc
+            #print("Mean area under curve for %sPCA followed by %s: %0.2f" % (kernel, model_name, mean_auc))
+            
+        #print(mean_auc_list)
+        
+        #Plot auc vs num folds
+        fig = plt.figure(figsize=(10, 6))
+        
+        plt.plot(k_list,
+                 mean_aucs,
+                 color = 'g',
+                 marker = 'o',                 
+                 )
+        
+        plt.title('Area under ROC curve with varying K(NN) values (%sPCA, dataset %s)' % (kernel, dataset))
+        plt.xlabel('k (nearest neighbours)')
+        plt.ylabel('Area under ROC curve')
+        plt.xticks(k_list)
+        
+        #plt.show()
+        plt.savefig('%sk_vary_data%s_%spca_%s.png' % (filepath, dataset, abbreviation, nowtime))
+        plt.close()
+        
+        # Find max AUC and corresponding k
+        max_auc = 0
+        k_max_auc = 0
+        
+        for i in range(len(k_list)):
+            
+            if mean_aucs[i] > max_auc:
+                max_auc = mean_aucs[i]
+                k_max_auc = k_list[i]
+            
+        
+        print('Max mean AUC is %0.2f given by k = %s' % (max_auc, k_max_auc))
+    
+            
+    # End of dataset run        
+    print('\n###################################################################')
+
+#Calculate and display time taken or script to run
+EndTime = (time.time() - StartTime)
+print('\nTime taken for script to run is %.2f seconds' % EndTime)

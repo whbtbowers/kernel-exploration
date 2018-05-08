@@ -1,13 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Apr 27 14:32:26 2018
-
-@author: whb17
-
-
-"""
-
 import time
 import os
 import matplotlib.pyplot as plt
@@ -16,7 +6,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 sns.set(style="ticks")
-#sns.set(style='darkgrid')
 
 import plotly.plotly as py
 import plotly.tools as tls
@@ -29,6 +18,7 @@ from sklearn.model_selection import StratifiedKFold, cross_val_score, KFold, cro
 from sklearn.metrics import accuracy_score, roc_curve, auc
 from sklearn.preprocessing import scale, normalize
 from sklearn.decomposition import KernelPCA, PCA
+from sklearn.cross_decomposition import PLSRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
@@ -43,7 +33,7 @@ from scipy import interp
 StartTime = time.time()
 
 # Name of script to trace where images came from
-scriptname = 'roc_kpca1_6'
+scriptname = 'kpca_pls1.py'
 
 #Select current toy dataset
 dataset = '024'
@@ -117,8 +107,9 @@ kpcas.append(('RBF K', 'rbf_k',KernelPCA(n_components=2, kernel='rbf', gamma=gam
 
 models = []
 
-models.append(('SVC', SVC(kernel='linear', probability=True)))
+#models.append(('SVC', SVC(kernel='linear', probability=True)))
 
+models.append(('PLS', PLSRegression())) # Scale=False as data already scaled.
 
 cv = StratifiedKFold(n_splits=10, random_state=10)
 

@@ -1,18 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Apr 25 14:43:25 2018
-
-@author: whb17
-"""
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Apr 25 12:35:39 2018
-
-@author: whb17
-"""
 
 import time
 
@@ -43,7 +28,7 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.svm import SVC
 from scipy import interp
-    
+
 
 #To show runtime of script
 StartTime = time.time()
@@ -52,7 +37,7 @@ StartTime = time.time()
 scriptname = 'gs_tune_1_3'
 
 #Select current toy dataset
-dataset = '018'
+dataset = '024'
 
 #Create directory if directory does not exist
 filepath = '../../figs/out/%s/%s/' % (scriptname, dataset)
@@ -63,12 +48,12 @@ if not os.path.exists(filepath):
 #Import toy data and target
 X = pd.read_csv('../../data/simulated/mvnsim/mvnsim' + dataset + '.csv', sep=',', header=0, index_col=0).as_matrix()
 y = np.load('../../data/simulated/mvnsim/target' + dataset + '.npy')
- 
+
 #Plot initial data
-plot_scatter(X, 
-             y, 
-             'Initial data', 
-             x_label='x coordinate', 
+plot_scatter(X,
+             y,
+             'Initial data',
+             x_label='x coordinate',
              y_label='y coordinate',
              #output='save',
              #path='%sinitial.png' % filepath
@@ -86,7 +71,7 @@ plot_scatter(X_scaled,
              y, 'Scaled data',
              x_label='x coordinate',
              y_label='y coordinate',
-             output='show'                             
+             output='show'
              #output='save',
              #path='%sscaled.png' % filepath
              )
@@ -95,8 +80,8 @@ plot_scatter(X_scaled,
 mean_aucs = dict()
 
 # hyperparameters to test
-#k_list = list(range(5, 31, 5))
-gamma_list = [2e-10, 2e-9, 2e-8, 2e-7, 2e-6, 2e-5, 2e-4]#, 2e-3, 2e-2, 0.2, 2.0]
+k_list = list(range(5, 31, 5))
+gamma_list = [2e-10, 2e-9, 2e-8, 2e-7, 2e-6, 2e-5, 2e-4, 2e-3, 2e-2, 0.2, 2.0]
 
 # Updatable scalar values to try to find optimal hyperparameters
 max_mean_auc = 0
@@ -112,11 +97,11 @@ aucs = []
 mean_fpr = np.linspace(0, 1, 100)
 
 for gamma in gamma_list:
-    
+
     #RBF KPCA with each gamma
     kpca = KernelPCA(n_components=2, kernel='rbf', gamma=gamma)
     X_kpca = kpca.fit_transform(X_scaled)
-    
+
     # Plot each kpca
     plot_scatter(X_kpca,
                  y,
@@ -127,47 +112,46 @@ for gamma in gamma_list:
                  #output='save',
                  #path='%srbf_kpca_gamma%s.png' % (filepath, gamma)
                  )
-    
+
     # Declare list of mean ROC AUC for each value of gamma
     mean_auc_row = []
-    
+
     # Update dictionary of all AUC means
-    
+
     mean_aucs.update({gamma:mean_auc_row})
-    
+
     for k in k_list:
-        
+
                 cv = StratifiedKFold(n_splits=k)
-                
+
                 print('Peforming %s-fold cross-validated SVC after RBF KPCA (γ = %s)' % (k, gamma))
 
-                
+
                 # To count number of folds
                 i = 0
-                
+
                 for train, test in cv.split(X_kpca, y):
-                       
+
                     probas_ = svc.fit(X_kpca[train], y[train]).predict_proba(X_kpca[test])
-            
-                    # Compute ROC curve and area the curve
-                    
+
+                    # Compute ROC curve and area under it
                     fpr, tpr, thresholds = roc_curve(y[test], probas_[:, 1])
                     tprs.append(interp(mean_fpr, fpr, tpr))
                     tprs[-1][0] = 0.0
                     roc_auc = auc(fpr, tpr)
                     aucs.append(roc_auc)
-                
+
                     i += 1
 
-                
+
                 #Calculate means
                 mean_tpr = np.mean(tprs, axis=0)
                 mean_tpr[-1] = 1.0
                 mean_auc = auc(mean_fpr, mean_tpr)
                 mean_auc_row.append(mean_auc)
-                
+
                 std_auc = np.std(aucs)
-                
+
                 std_tpr = np.std(tprs, axis=0)
                 tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
                 tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
@@ -180,8 +164,8 @@ for i in gamma_list:
             max_mean_auc = mean_aucs[i][j]
             opt_gamma = i
             opt_k = k_list[j]
-                
-# Plot surface                
+
+# Plot surface
 ma_array = []
 
 for i in gamma_list:
@@ -209,10 +193,10 @@ print("\nGreatest area under curve gained from γ of %s, K of %s" % (opt_gamma, 
 fig = plt.figure()
 ax = fig.gca(projection='3d')
 
-surf = ax.plot_surface(X, 
+surf = ax.plot_surface(X,
                        Y,
                        Z=ma_array,
-                       cmap=cm.coolwarm,                       
+                       cmap=cm.coolwarm,
                        #linewidth=0,
                        antialiased=False)
 
@@ -226,6 +210,6 @@ ax.set_zlabel('Mean area under ROC curve', fontsize=20)
 plt.title('Change in area under ROC curve with varying gamma in RBF KPCA and varying K in k-fold cross-validation')
 
 plt.show()
-#Calculate and display time taken or script to run 
+#Calculate and display time taken or script to run
 EndTime = (time.time() - StartTime)
 print('\nTime taken for script to run is %.2f seconds' % EndTime)

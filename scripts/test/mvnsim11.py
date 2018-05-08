@@ -40,7 +40,7 @@ target[0:50] = '1'
 d_size = [500, 50]
 
 #1st component
-d1_mean = [20, 15]
+d1_mean = [20.5, 15.5]
 cov_1 = [[9, 6], [6, 6]]
 d1_x, d1_y = multivariate_normal(d1_mean, cov_1, d_size).T
 
@@ -52,10 +52,10 @@ d2_x, d2_y = multivariate_normal(d2_mean, cov_2, d_size).T
 
 # Combine to create full 100*500 dataset
 mvn_sim = np.vstack((d1_x, d2_x))
-  
+
 mvn_sim_df = pd.DataFrame.from_records(mvn_sim)
 
-   
+
 
 plt.figure(figsize=(50,15))
 
@@ -81,7 +81,6 @@ np.save('../../data/simulated/mvnsim/target' + simname + '.npy', target)
 
 print('\nDataset %s saved' % simname)
 
-#Calculate and display time taken or script to run 
+#Calculate and display time taken or script to run
 EndTime = (time.time() - StartTime)
 print('\nTime taken for script to run is %.2f seconds' % EndTime)
-
