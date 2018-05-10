@@ -17,12 +17,13 @@ import pandas as pd
 import seaborn as sns
 sns.set(style="ticks")
 #sns.set(style='darkgrid')
+import p2funcs as p2
 
 import plotly.plotly as py
 import plotly.tools as tls
 tls.set_credentials_file(username='whtbowers', api_key='skkoCIGowBQdx7ZTJMzM')
 
-from p2funcs import plot_scatter, target_split, distribution_boxplot
+
 
 
 from sklearn.model_selection import StratifiedKFold, cross_val_score, KFold, cross_val_predict, cross_validate, train_test_split
@@ -62,7 +63,7 @@ y = np.load('../../data/simulated/mvnsim/target' + dataset + '.npy')
 #print(X.shape)
 
 
-
+'''
 distribution_boxplot(X,
                      y,
                      "Initial category 1 distribution of dataset %s" % dataset,
@@ -75,14 +76,14 @@ distribution_boxplot(X,
                      )
 
 print('\nBoxplot of initial data for dataset %s saved.' % dataset)
-
+'''
 ## PREPROCESSING ##
 
 #Scale initial data to centre data
 
 X_scaled = scale(X)
 X_scaled_df = pd.DataFrame.from_records(X_scaled)
-
+'''
 distribution_boxplot(X_scaled_df,
                      y,
                      "Scaled category 1 distribution of dataset %s" % dataset,
@@ -93,7 +94,7 @@ distribution_boxplot(X_scaled_df,
                      )
 #print(X_scaled.shape)
 print('\nBoxplot of scaled data for dataset %s saved.' % dataset)
-
+'''
 #Initiate KPCAwith various kernels
 
 # As I'm using 500 variables, 0.002 is the default gamma (1/n_variables)
@@ -108,7 +109,7 @@ kpcas = []
 
 #Linear kernal has no need for gamma
 kpcas.append(('Linear K', 'lin_k', KernelPCA(n_components=2, kernel='linear')))
-kpcas.append(('RBF K', 'rbf_k',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
+#kpcas.append(('RBF K', 'rbf_k',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
 #kpcas.append(('Polynomial K', 'ply_k', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
 #kpcas.append(('Sigmoid K', 'sig_k', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
 #kpcas.append(('Cosine K', 'cos_k',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
@@ -123,9 +124,7 @@ models.append(('SVC', SVC(kernel='linear', probability=True)))
 cv = StratifiedKFold(n_splits=10, random_state=10)
 
 
-tprs = []
-aucs = []
-mean_fpr = np.linspace(0, 1, 100)
+
 
 
 
@@ -136,7 +135,8 @@ kpca_kernels = []
 for kernel, abbreviation, kpca in kpcas:
 
     X_kpca = kpca.fit_transform(X_scaled)
-
+    
+    '''
     plot_scatter(X_kpca,
                  y,
                  'First 2 principal components after %sPCA' % kernel,
@@ -148,7 +148,8 @@ for kernel, abbreviation, kpca in kpcas:
                  path='../../figs/out/%s/%s/%spca_gamma%s.png' % (scriptname, dataset, abbreviation, gamma)
                  )
     print('\nScatter plot of first two principal components after %sPCA for dataset %s saved.' % (kernel, dataset))
-
+    '''
+    
     X_kpca = kpca.fit_transform(X)
 
     kpca_kernels.append(kernel)
@@ -163,10 +164,17 @@ for kernel, abbreviation, kpca in kpcas:
         mdl_names.append(name)
         print('\nPerforming ' + name + ' with ' + kernel + 'PCA')
         #print(mdl_names)
-
+        
+        tprs = []
+        aucs = []
+        mean_fpr = np.linspace(0, 1, 100)
+        
         # To count number of folds
         i = 0
-
+        
+        raw_tprs = []
+        raw_fprs = []
+        
         for train, test in cv.split(X_kpca, y):
 
             probas_ = model.fit(X_kpca[train], y[train]).predict_proba(X_kpca[test])
@@ -174,6 +182,8 @@ for kernel, abbreviation, kpca in kpcas:
             # Compute ROC curve and area the curve
 
             fpr, tpr, thresholds = roc_curve(y[test], probas_[:, 1])
+            raw_tprs.append(tpr)
+            raw_fprs.append(fpr)
             tprs.append(interp(mean_fpr, fpr, tpr))
             tprs[-1][0] = 0.0
             roc_auc = auc(fpr, tpr)
@@ -182,7 +192,13 @@ for kernel, abbreviation, kpca in kpcas:
                      label='ROC fold %d (AUC = %0.2f)' % (i, roc_auc))
 
             i += 1
-
+        print('\ntprs: ')    
+        print(raw_tprs)
+        p2.writetext(str(raw_tprs), 'tprs_to_plot.txt', '../../int_charts/')
+        print('\nfprs: ')
+        print(raw_fprs)
+        p2.writetext(str(raw_fprs), 'fprs_to_plot.txt', '.')
+            
         plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r',
                  label='Luck', alpha=.8)
 
@@ -202,12 +218,12 @@ for kernel, abbreviation, kpca in kpcas:
 
         plt.xlim([-0.05, 1.05])
         plt.ylim([-0.05, 1.05])
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
+        #plt.xlabel('False Positive Rate')
+        #plt.ylabel('True Positive Rate')
         plt.title('Receiver operating characteristic (Using %sPCA, γ = %s)' % (kernel, gamma))
         plt.legend(loc="lower right")
-        #plt.show()
-        plt.savefig('../../figs/out/%s/%s/roc_%spca_gamma%s.png' % (scriptname, dataset, abbreviation, gamma))
+        plt.show()
+        #plt.savefig('../../figs/out/%s/%s/roc_%spca_gamma%s.png' % (scriptname, dataset, abbreviation, gamma))
         plt.close()
 
 #Calculate and display time taken or script to run

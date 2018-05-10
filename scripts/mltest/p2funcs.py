@@ -5,6 +5,8 @@ Created on Thu Apr 26 15:35:31 2018
 
 @author: whb17
 """
+
+import os
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
@@ -17,8 +19,13 @@ import plotly.tools as tls
 tls.set_credentials_file(username='whtbowers', api_key='skkoCIGowBQdx7ZTJMzM')
 
 import pandas as pd
+import numpy as np
 
 from sklearn.preprocessing import Imputer
+from sklearn.metrics import roc_curve, auc
+
+
+from scipy import interp
 
 
 def plot_scatter(x, y, title, gamma=None, x_label='x coordinate', y_label='y coordinate', output=None, path=None, ply_title=None):
@@ -48,9 +55,6 @@ def plot_scatter(x, y, title, gamma=None, x_label='x coordinate', y_label='y coo
         plt.show()
     elif output == 'save':
         plt.savefig(path)
-    elif output == 'plotly':        
-        plotly_fig = tls.mpl_to_plotly(fig)
-        plot_url = py.plot(plotly_fig, filename=ply_title)
     else:
         pass
         
@@ -175,4 +179,59 @@ def filt_imp(X, threshold):
     print('\nAfter imputation, data contains %s columns and %s rows.' % (n_cols, n_rows))
     
     return(X_imputed)
-    
+
+#Provide mean area under ROC curve    
+def cv_mra(X, y, cv, model, model_name, kernel):
+        
+        mean_aucs = []
+        tprs = []
+        aucs = []
+        mean_fpr = np.linspace(0, 1, 100)
+        
+        #mdl_names.append(model_name)
+        print('\nPerforming ' + model_name + ' after ' + kernel + 'PCA')
+        #print(mdl_names)
+
+        # To count number of folds
+        i = 0
+                   
+        for train, test in cv.split(X, y):
+
+            probas_ = model.fit(X[train], y[train]).predict_proba(X[test])
+
+            # Compute ROC curve and area the curve
+
+            fpr, tpr, thresholds = roc_curve(y[test], probas_[:, 1])
+            tprs.append(interp(mean_fpr, fpr, tpr))
+            tprs[-1][0] = 0.0
+            roc_auc = auc(fpr, tpr)
+            aucs.append(roc_auc)
+
+            i += 1
+
+        mean_tpr = np.mean(tprs, axis=0)
+        mean_tpr[-1] = 1.0
+        mean_auc = auc(mean_fpr, mean_tpr)
+        mean_aucs.append(mean_auc)
+        std_auc = np.std(aucs)
+            
+        std_tpr = np.std(tprs, axis=0)
+        tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
+        tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
+                   
+        # Display mean roc auc
+        print("Mean area under curve for %sPCA followed by %s: %0.2f" % (kernel, model_name, mean_auc))
+        
+        return(mean_auc)
+
+# Like range but for floats
+def frange(x, y, jump):
+  while x < y:
+    yield x
+    x += jump    
+
+def writetext(content, filename, path):
+	os.chdir(path)
+	text_file = open(filename, "w")
+	text_file.write(content)
+	text_file.close()
