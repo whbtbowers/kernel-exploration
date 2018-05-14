@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Mon May 14 13:31:23 2018
-
-@author: whb17
-"""
 import operator
 import time
 import datetime
@@ -46,15 +39,20 @@ scriptname = 'modeltest5'
 
 #List of toy datasets to test
 dataset_list = ['022', '023', '024']
-#dataset_list = ['024']
+#dataset_list = ['022']
 #dataset_list = ['mesa']
 
 #provide values of gamma to test for all kernel methods
 t1_gamma_list = [2e-7, 0.000002, 0.00002, 0.0002, 0.002, 0.02, 0.2, 2.0]
 
+# Optimal gamma decided by 2-tiered grid search
+
 # Collect optimal gamma from each dataset
 opt_t1_gammas = []
 opt_t2_gammas = []
+
+#Lists of datasets and target arrays 
+datalist = []
 
 for dataset in dataset_list: 
 
@@ -74,49 +72,103 @@ for dataset in dataset_list:
     else:
         X = pd.read_csv('../../data/simulated/mvnsim/mvnsim' + dataset + '.csv', sep=',', header=0, index_col=0)
         y = np.load('../../data/simulated/mvnsim/target' + dataset + '.npy')
-                
-        #Scale initial data to centre data    
-        X_scaled = scale(X)
+        datalist.append((dataset, X, y))
         
-        #Declare list for t1 mean mean area under ROC curve (mma) values        
-        t1_mmas = []
+    #Scale initial data to centre    
+    X_scaled = scale(X)
+    
+    #Declare list for t1 mean mean area under ROC curve (mma) values        
+    t1_mmas = []
+    
+    # Create initial variables to update
+    max_t1_mma = 0
+    opt_t1_gamma = 0
+    
+    print('\n### TIER 1 GRID SEARCH ###')
+    
+    for gamma in t1_gamma_list:
         
-        # Create initial variables to update
-        max_t1_mma = 0
-        opt_t1_gamma = 0
+        t1_auc_mat, t1_kpcas, t1_models  = p2f.m_test5(X_scaled, y, gamma, dataset)
         
-        for gamma in t1_gamma_list:
+        t1_mmas.append(t1_auc_mat.mean())
+    
+    # Select optimal t1 gamma 
+    for i in range(len(t1_mmas)):
+        if t1_mmas[i] > max_t1_mma:
+            max_t1_mma = t1_mmas[i]
+            opt_t1_gamma = t1_gamma_list[i]
             
-            t1_auc_mat, t1_kpcas, t1_models  = p2f.m_test5(X_scaled, y, gamma, dataset)
-            
-            t1_mmas.append(t1_auc_mat.mean())
-        
-        # Select optimal t1 gamma 
-        for i in range(len(t1_mmas)):
-            if t1_mmas[i] > max_t1_mma:
-                max_t1_mma = t1_mmas[i]
-                opt_t1_gamma = t1_gamma_list[i]
-                
-        # Show optimal gamma
-        #print('Optimal Tier 1 gamma for dataset %s found to be %s' %(dataset, opt_t1_gamma))
-        opt_t1_gammas.append(opt_t1_gamma)
+    # Show optimal gamma
+    #print('Optimal Tier 1 gamma for dataset %s found to be %s' %(dataset, opt_t1_gamma))
+    opt_t1_gammas.append(opt_t1_gamma)
 
-    # End of dataset run        
-    print('\n###################################################################')
+# End of dataset run        
+print('\n###################################################################')
 
+# Print aggregate gamma values
 for i in range(len(opt_t1_gammas)):
-    print('Optimal Tier 1 gamma for dataset %s found to be %s' %(dataset_list[i], opt_t1_gammas[i]))       
-    
-gcount_dict = dict((x,opt_t1_gammas.count(x)) for x in set(opt_t1_gammas))
+    print('\nOptimal Tier 1 gamma for dataset %s found to be %s' %(dataset_list[i], opt_t1_gammas[i]))       
 
-gamma_consensus = max(gcount_dict, key=gcount_dict.get)
+# Count number of each gamma    
+t1_gcount_dict = dict((x,opt_t1_gammas.count(x)) for x in set(opt_t1_gammas))
 
-gamma_i = t1_gamma_list.index(gamma_consensus)
+# Find most frequent gamma value
+t1_gamma_consensus = max(t1_gcount_dict, key=t1_gcount_dict.get)
 
+#Just in case last value selected:
+if t1_gamma_consensus == t1_gamma_list[-1]:
+    t1_gamma_consensus = t1_gamma_list[-2]
+
+# Greate tier 2 gamma list
+gamma_i = t1_gamma_list.index(t1_gamma_consensus)
 t2_gamma_list = list(p2f.frange(t1_gamma_list[gamma_i], t1_gamma_list[gamma_i+1], t1_gamma_list[gamma_i]))
+
+
  
-print(t2_gamma_list)   
+for dataset, X, y in datalist:
     
+    #Scale initial data to centre    
+    X_scaled = scale(X)
+    
+    #Declare list for t2 mean mean area under ROC curve (mma) values        
+    t2_mmas = []
+    
+    # Create initial variables to update
+    max_t2_mma = 0
+    opt_t2_gamma = 0
+    
+    print('\n### TIER 2 GRID SEARCH ###')
+    
+    for gamma in t2_gamma_list:
+        
+        t2_auc_mat, t2_kpcas, t2_models  = p2f.m_test5(X_scaled, y, gamma, dataset)
+        
+        t2_mmas.append(t2_auc_mat.mean())
+    
+    # Select optimal t1 gamma 
+    for i in range(len(t2_mmas)):
+        if t2_mmas[i] > max_t2_mma:
+            max_t2_mma = t2_mmas[i]
+            opt_t2_gamma = t2_gamma_list[i]
+            
+    # Show optimal gamma
+    opt_t2_gammas.append(opt_t2_gamma)
+
+# End of dataset run        
+print('\n###################################################################\n')
+
+# Print aggregate gamma values
+for i in range(len(opt_t2_gammas)):
+    print('\nOptimal Tier 2 gamma for dataset %s found to be %s' % (dataset_list[i], opt_t2_gammas[i])) 
+
+# Count number of each gamma    
+t2_gcount_dict = dict((x,opt_t2_gammas.count(x)) for x in set(opt_t2_gammas))
+      
+# Find most frequent gamma value
+t2_gamma_consensus = max(t2_gcount_dict, key=t2_gcount_dict.get)
+
+print("\nOptimal gamma parameter after 2-tiered grid search: %s" % t2_gamma_consensus) 
+
 #Calculate and display time taken or script to run
 EndTime = (time.time() - StartTime)
 print("\nTime taken for script to run is %.2f seconds\n" % EndTime)

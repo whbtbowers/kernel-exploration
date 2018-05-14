@@ -190,50 +190,6 @@ def filt_imp(X, threshold):
     
     return(X_imputed)
 
-#Provide mean area under ROC curve    
-def cv_mra(X, y, cv, model, model_name, kernel):
-        
-        mean_aucs = []
-        tprs = []
-        aucs = []
-        mean_fpr = np.linspace(0, 1, 100)
-        
-        #mdl_names.append(model_name)
-        print('\nPerforming ' + model_name + ' after ' + kernel + 'PCA')
-        #print(mdl_names)
-
-        # To count number of folds
-        i = 0
-                   
-        for train, test in cv.split(X, y):
-
-            probas_ = model.fit(X[train], y[train]).predict_proba(X[test])
-
-            # Compute ROC curve and area the curve
-
-            fpr, tpr, thresholds = roc_curve(y[test], probas_[:, 1])
-            tprs.append(interp(mean_fpr, fpr, tpr))
-            tprs[-1][0] = 0.0
-            roc_auc = auc(fpr, tpr)
-            aucs.append(roc_auc)
-
-            i += 1
-
-        mean_tpr = np.mean(tprs, axis=0)
-        mean_tpr[-1] = 1.0
-        mean_auc = auc(mean_fpr, mean_tpr)
-        mean_aucs.append(mean_auc)
-        std_auc = np.std(aucs)
-            
-        std_tpr = np.std(tprs, axis=0)
-        tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
-        tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
-                   
-        # Display mean roc auc
-        print("Mean area under curve for %sPCA followed by %s: %0.2f" % (kernel, model_name, mean_auc))
-        
-        return(mean_auc)
-
 # Like range but for floats
 def frange(x, y, jump):
   while x < y:
@@ -265,10 +221,10 @@ def m_test5(X, y, gamma, dataset):
     #Linear kernal has no need for gamma
     kpcas.append(('Linear KPCA', 'lin_k', KernelPCA(n_components=2, kernel='linear')))
     kpcas.append(('RBF KPCA', 'rbf_k',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
-    #kpcas.append(('Laplacian KPCA', 'lap_k',KernelPCA(n_components=2, kernel='precomputed')))    
-    #kpcas.append(('Polynomial KPCA', 'ply_k', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
-    #kpcas.append(('Sigmoid KPCA', 'sig_k', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
-    #kpcas.append(('Cosine KPCA', 'cos_k',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    kpcas.append(('Laplacian KPCA', 'lap_k',KernelPCA(n_components=2, kernel='precomputed')))    
+    kpcas.append(('Polynomial KPCA', 'ply_k', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
+    kpcas.append(('Sigmoid KPCA', 'sig_k', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    kpcas.append(('Cosine KPCA', 'cos_k',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
     
     #Initiate models with default parameters
 
@@ -276,14 +232,14 @@ def m_test5(X, y, gamma, dataset):
     
     models.append(('Linear SVM', 'lin_svc', SVC(kernel='linear', probability=True)))
     models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
-    #models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
+    models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
     models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
-    #models.append(('K-Nearest Neighbour', 'knn', KNeighborsClassifier()))
-    #models.append(('Logistic Regression', 'log_reg', LogisticRegression()))
-    #models.append(('Decision Tree', 'dec_tree', DecisionTreeClassifier()))
+    models.append(('K-Nearest Neighbour', 'knn', KNeighborsClassifier()))
+    models.append(('Logistic Regression', 'log_reg', LogisticRegression()))
+    models.append(('Decision Tree', 'dec_tree', DecisionTreeClassifier()))
     #models.append(('Gaussian Naive Bayes', 'gnb', GaussianNB()))
-    #models.append(('Random Forest', 'rf', RandomForestClassifier()))
-    #models.append(('Gradient Boosting', 'gb', GradientBoostingClassifier()))
+    models.append(('Random Forest', 'rf', RandomForestClassifier()))
+    models.append(('Gradient Boosting', 'gb', GradientBoostingClassifier()))
     
     # Initiate cross-validation
     folds = 10    
