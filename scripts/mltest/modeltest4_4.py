@@ -131,8 +131,7 @@ for dataset in dataset_list:
     #Linear kernal has no need for gamma
     kpcas.append(('Linear KPCA', 'lin_k', KernelPCA(n_components=2, kernel='linear')))
     kpcas.append(('RBF KPCA', 'rbf_k',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
-    kpcas.append(('Laplacian KPCA', 'lap_k',KernelPCA(n_components=2, kernel='precomputed')))
-    
+    kpcas.append(('Laplacian KPCA', 'lap_k',KernelPCA(n_components=2, kernel='precomputed')))    
     #kpcas.append(('Polynomial KPCA', 'ply_k', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
     #kpcas.append(('Sigmoid KPCA', 'sig_k', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
     #kpcas.append(('Cosine KPCA', 'cos_k',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
@@ -152,7 +151,7 @@ for dataset in dataset_list:
 
     #models.append(('PLS', PLSRegression())) # Scale=False as data already scaled.
     
-    folds = 2
+    folds = 10
     
     cv = StratifiedKFold(n_splits=folds, random_state=10)
     

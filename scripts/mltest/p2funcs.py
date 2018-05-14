@@ -20,9 +20,19 @@ tls.set_credentials_file(username='whtbowers', api_key='skkoCIGowBQdx7ZTJMzM')
 
 import pandas as pd
 import numpy as np
-
-from sklearn.preprocessing import Imputer
-from sklearn.metrics import roc_curve, auc
+ 
+from sklearn.model_selection import StratifiedKFold, cross_val_score, KFold, cross_val_predict, cross_validate, train_test_split
+from sklearn.metrics import accuracy_score, roc_curve, auc
+from sklearn.preprocessing import scale, normalize, Imputer
+from sklearn.decomposition import KernelPCA, PCA
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.svm import SVC
+from sklearn.metrics.pairwise import laplacian_kernel, chi2_kernel
 
 
 from scipy import interp
@@ -112,12 +122,12 @@ def filt_imp(X, threshold):
     #print(col_names)
     
     # Remove ID column and display metrics
-    X = X.drop(columns='study')
+    #X = X.drop(columns='study')
     
-    n_cols, n_rows = X.shape
-    print("\nAfter dropping 'study' column, data contains %s columns and %s rows." % (n_cols, n_rows))
+    #n_cols, n_rows = X.shape
+    #print("\nAfter dropping 'study' column, data contains %s columns and %s rows." % (n_cols, n_rows))
     
-    col_names = list(X)
+    #col_names = list(X)
     
     # Initiate counter to count number of null values per column
     dropped_cols = 0
@@ -138,8 +148,8 @@ def filt_imp(X, threshold):
             dropped_cols += 1
     
     n_cols, n_rows = X.shape        
-    print('\n%s columns in dataset removed due to <10%% of cells populated.' % dropped_cols)
-    print('\nAfter columns <= 10%% populated removed, data contains %s columns and %s rows.' % (n_cols, n_rows))
+    print('\n%s columns in dataset removed due to ≤10%% of cells populated.' % dropped_cols)
+    print('\nAfter columns ≤ 10%% populated removed, data contains %s columns and %s rows.' % (n_cols, n_rows))
     
     col_names = list(X)
     
@@ -163,15 +173,15 @@ def filt_imp(X, threshold):
             dropped_rows += 1
     
     n_cols, n_rows = X.shape
-    print('\n%s rows in remaining dataset removed due to <10%% of cells populated.' % dropped_rows)
-    print('\nAfter columns and rows <= 10%% populated removed, data contains %s columns and %s rows.' % (n_cols, n_rows))
+    print('\n%s rows in remaining dataset removed due to ≤10%% of cells populated.' % dropped_rows)
+    print('\nAfter columns and rows ≤ 10%% populated removed, data contains %s columns and %s rows.' % (n_cols, n_rows))
     
     
     # Convert dataframe to numpy matrix for scikit learn
     X = X.as_matrix()
     
     # Uses mean as imputation strategy
-    impute = Imputer()
+    impute = Imputer(strategy='mean')
     X_imputed = impute.fit_transform(X)
     
     #print(X_imputed.shape)
@@ -235,3 +245,127 @@ def writetext(content, filename, path):
 	text_file = open(filename, "w")
 	text_file.write(content)
 	text_file.close()
+    
+def m_test5(X, y, gamma, dataset):
+    
+    #Record all mean roc_aucs for each gamma value
+    auc_mat = []
+
+    
+    #compute kernels not preloaded into kpca
+    #laplacian
+    K_lap = laplacian_kernel(X, gamma=gamma)
+    
+    kpcas = []
+
+    #Use standard PCA for comparison
+    
+    #kpcas.append(('standard PCA', 'std_', PCA(n_components=2)))
+    
+    #Linear kernal has no need for gamma
+    kpcas.append(('Linear KPCA', 'lin_k', KernelPCA(n_components=2, kernel='linear')))
+    kpcas.append(('RBF KPCA', 'rbf_k',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
+    #kpcas.append(('Laplacian KPCA', 'lap_k',KernelPCA(n_components=2, kernel='precomputed')))    
+    #kpcas.append(('Polynomial KPCA', 'ply_k', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
+    #kpcas.append(('Sigmoid KPCA', 'sig_k', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    #kpcas.append(('Cosine KPCA', 'cos_k',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    
+    #Initiate models with default parameters
+
+    models = []
+    
+    models.append(('Linear SVM', 'lin_svc', SVC(kernel='linear', probability=True)))
+    models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
+    #models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
+    models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
+    #models.append(('K-Nearest Neighbour', 'knn', KNeighborsClassifier()))
+    #models.append(('Logistic Regression', 'log_reg', LogisticRegression()))
+    #models.append(('Decision Tree', 'dec_tree', DecisionTreeClassifier()))
+    #models.append(('Gaussian Naive Bayes', 'gnb', GaussianNB()))
+    #models.append(('Random Forest', 'rf', RandomForestClassifier()))
+    #models.append(('Gradient Boosting', 'gb', GradientBoostingClassifier()))
+    
+    # Initiate cross-validation
+    folds = 10    
+    cv = StratifiedKFold(n_splits=folds, random_state=10)
+    
+    # Declare KPCA kernels deployed
+
+    kpca_kernels = []
+    
+    for kernel, abbreviation, kpca in kpcas:
+        
+        # To utilise precomputed kernel(s)
+        if kernel == 'Laplacian KPCA':
+            X_kpca = kpca.fit_transform(K_lap)
+        else:
+            X_kpca = kpca.fit_transform(X)
+        
+        '''        
+        p2f.plot_scatter(X_kpca,
+                     y,
+                     'First 2 principal components after %s' % kernel,
+                     gamma=gamma,
+                     x_label='Principal component 1',
+                     y_label='Principal component 2',
+                     #output = 'show',
+                     output='save',
+                     path='%s%s_%spca_gamma%s.png' % (filepath, nowtime, abbreviation, gamma)
+                     )
+        print('\nScatter plot of first two principal components after %s for dataset %s (γ = %s) saved.' % (kernel, dataset, gamma))
+        '''    
+        
+        kpca_kernels.append(kernel)
+    
+        # Declare names of models deployed
+        mdl_names = []        
+        
+        #Record mean_aucs
+        auc_mat_row = []
+               
+        for model_name, model_abv, model in models:
+            
+            tprs = []
+            aucs = []
+            mean_fpr = np.linspace(0, 1, 100)
+            
+            mdl_names.append(model_name)
+            print('\nPerforming %s followed by %s for dataset %s\n' % (kernel, model_name, dataset))
+            #print(mdl_names)
+    
+            # To count number of folds
+            i = 0
+            
+            for train, test in cv.split(X_kpca, y):
+    
+                probas_ = model.fit(X_kpca[train], y[train]).predict_proba(X_kpca[test])
+    
+                # Compute ROC curve and area the curve
+    
+                fpr, tpr, thresholds = roc_curve(y[test], probas_[:, 1])
+                tprs.append(interp(mean_fpr, fpr, tpr))
+                tprs[-1][0] = 0.0
+                roc_auc = auc(fpr, tpr)
+                aucs.append(roc_auc)
+    
+                i += 1
+    
+            mean_tpr = np.mean(tprs, axis=0)
+            mean_tpr[-1] = 1.0
+            mean_auc = auc(mean_fpr, mean_tpr)
+            auc_mat_row.append(mean_auc)
+            std_auc = np.std(aucs)
+                
+            std_tpr = np.std(tprs, axis=0)
+            tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
+            tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
+    
+               
+            # Display mean roc auc
+            #print("Mean area under curve for %s followed by %s (γ = %s): %0.2f" % (kernel, model_name, gamma, mean_auc))
+    
+        auc_mat.append(auc_mat_row)     
+
+    auc_mat = np.array(auc_mat)
+    
+    return(auc_mat, kpca_kernels, mdl_names)

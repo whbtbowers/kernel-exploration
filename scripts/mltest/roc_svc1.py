@@ -45,8 +45,9 @@ nowtime = now.strftime("%H-%M")
 scriptname = 'roc_svc1'
 
 #List of toy datasets to test
-dataset_list = ['022', '023', '024']
+#dataset_list = ['022', '023', '024']
 #dataset_list = ['024']
+dataset_list = ['mesa']
 
 for dataset in dataset_list: 
 
@@ -56,9 +57,16 @@ for dataset in dataset_list:
     if not os.path.exists(filepath):
         os.makedirs(filepath)
     
-    #Import toy data and target
-    X = pd.read_csv('../../data/simulated/mvnsim/mvnsim' + dataset + '.csv', sep=',', header=0, index_col=0)
-    y = np.load('../../data/simulated/mvnsim/target' + dataset + '.npy')
+    #Import data and target
+    if dataset == 'mesa':
+        X = pd.read_csv('../../data/mesa/MESA_CPMG_MBINV2_ManuallyBinnedData_BatchCorrected_LogTransformed_Data.csv', sep=',')
+        
+        X = p2f.filt_imp(X, 0.1)
+        
+        y = np.load('../../data/mesa/mesatarget.npy')
+    else:
+        X = pd.read_csv('../../data/simulated/mvnsim/mvnsim' + dataset + '.csv', sep=',', header=0, index_col=0)
+        y = np.load('../../data/simulated/mvnsim/target' + dataset + '.npy')
     #print(y)
     #print(y.shape)
     #print(X.shape)
@@ -106,7 +114,7 @@ for dataset in dataset_list:
     #laplacian
     kpca_lap = laplacian_kernel(X, gamma=gamma)
     #chi squared
-    kpca_chi = chi2_kernel(X, gamma=gamma)
+    #kpca_chi = chi2_kernel(X, gamma=gamma)
     
     kpcas = []
     
@@ -116,12 +124,12 @@ for dataset in dataset_list:
     
     #Linear kernal has no need for gamma
     kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
-    #kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
-    #kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
+    kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
+    kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
     #kpcas.append(('Chi Squared KPCA', 'chi_kpca',KernelPCA(n_components=2, kernel='precomputed')))
     #kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
-    #kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
-    #kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
     
     #Initiate models 
     models = []
@@ -132,7 +140,7 @@ for dataset in dataset_list:
     #models.append(('Chi Squared Kernel SVM','chi_svc', SVC(kernel='precomputed', probability=True)))
     models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
     models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
-    models.append(('Cosine Kernel SVM','cos_svc', SVC(kernel='cosine', gamma=gamma, probability=True)))
+    #models.append(('Cosine Kernel SVM','cos_svc', SVC(kernel='cosine', gamma=gamma, probability=True)))
     
     
     cv = StratifiedKFold(n_splits=10, random_state=10)
@@ -179,67 +187,65 @@ for dataset in dataset_list:
     
         # Declare names of models deployed
         mdl_names = []
-        plt.figure(figsize=(15, 9))
+        
     
         for model_name, model_abv, model in models:
     
             mdl_names.append(model_name)
             print('\nPerforming ' + model_name + ' with ' + kernel)
             #print(mdl_names)
-    
+            
+            #Begin plotting
+            plt.figure(figsize=(20, 12))
+                
             # To count number of folds
             i = 0
-    
+            
             for train, test in cv.split(X_kpca, y):
-                
-                probas_ = model.fit(X_kpca[train], y[train]).predict_proba(X_kpca[test])   
-                
-                '''
-                if kernel == 'Laplacian Kernel SVM':
-                    probas_ = model.fit(mod_lap[train], y[train]).predict_proba(mod_lap[test])  
-                elif kernel == 'Chi Squared Kernel SVM':
-                    probas_ = model.fit(mod_chi[train], y[train]).predict_proba(mod_chi[test])  
-                else:
-                    probas_ = model.fit(X_kpca[train], y[train]).predict_proba(X_kpca[test])   
-                '''
+                   
+                probas_ = model.fit(X_kpca[train], y[train]).predict_proba(X_kpca[test])
+        
                 # Compute ROC curve and area the curve
-    
+                
                 fpr, tpr, thresholds = roc_curve(y[test], probas_[:, 1])
                 tprs.append(interp(mean_fpr, fpr, tpr))
                 tprs[-1][0] = 0.0
                 roc_auc = auc(fpr, tpr)
                 aucs.append(roc_auc)
                 plt.plot(fpr, tpr, lw=1, alpha=0.3,
-                         label='ROC fold %d (AUC = %0.2f)' % (i, roc_auc))
-    
+                         label='ROC fold %d (AUC = %0.2f)' % (i+1, roc_auc))
+            
                 i += 1
-    
+                    
             plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r',
                      label='Luck', alpha=.8)
-    
+            
+            #Calculate means
             mean_tpr = np.mean(tprs, axis=0)
             mean_tpr[-1] = 1.0
             mean_auc = auc(mean_fpr, mean_tpr)
+            #mean_auc_row.append(mean_auc)
+            
             std_auc = np.std(aucs)
             plt.plot(mean_fpr, mean_tpr, color='b',
                      label=r'Mean ROC (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc),
                      lw=2, alpha=.8)
-    
+            
             std_tpr = np.std(tprs, axis=0)
             tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
             tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
             plt.fill_between(mean_fpr, tprs_lower, tprs_upper, color='grey', alpha=.2,
                              label=r'$\pm$ 1 std. dev.')
-    
+            
             plt.xlim([-0.05, 1.05])
             plt.ylim([-0.05, 1.05])
             plt.xlabel('False Positive Rate')
             plt.ylabel('True Positive Rate')
-            plt.title('Receiver operating characteristic (Using %s with %s, γ = %s)' % (kernel, model_name, gamma))
-            plt.legend(loc="lower right")
-            #plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+            plt.title('Receiver operating characteristic (Using %s followed by %s, γ = %s)' % (kernel, model_name,gamma))
+            plt.legend()
+            #plt.legend(bbox_to_anchor=(1.05, 0.5), loc='upper right', borderaxespad=0.)
             #plt.show()
-            plt.savefig('%s%s_roc_%s_gamma%s.png' % (filepath, nowtime, model_abv, gamma))
+            plt.savefig('%s%s_%s_roc_%s_gamma%s.png' % (filepath, nowtime, abbreviation, model_abv, gamma))
             plt.close()
 
 
