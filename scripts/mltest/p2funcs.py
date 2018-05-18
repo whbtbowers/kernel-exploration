@@ -1,14 +1,9 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Apr 26 15:35:31 2018
-
-@author: whb17
-"""
-
 import os
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+
+import time
+import datetime
 
 import seaborn as sns
 sns.set(style="ticks")
@@ -20,6 +15,8 @@ tls.set_credentials_file(username='whtbowers', api_key='skkoCIGowBQdx7ZTJMzM')
 
 import pandas as pd
 import numpy as np
+from numpy import linalg as la
+from numpy.random import multivariate_normal
  
 from sklearn.model_selection import StratifiedKFold, cross_val_score, KFold, cross_val_predict, cross_validate, train_test_split
 from sklearn.metrics import accuracy_score, roc_curve, auc
@@ -37,8 +34,12 @@ from sklearn.metrics.pairwise import laplacian_kernel, chi2_kernel
 
 from scipy import interp
 
+# Time to differentiate images
+now = datetime.datetime.now()
+nowdate = now.strftime("%Y-%m-%d")
+nowtime = now.strftime("%H-%M")
 
-def plot_scatter(x, y, title, gamma=None, x_label='x coordinate', y_label='y coordinate', output=None, path=None, ply_title=None):
+def plot_scatter(x, y, title, gamma=None, x_label='x coordinate', y_label='y coordinate', cat1='Category 1', cat0='Category 0', output=None, path=None, ply_title=None):
     
     fig = plt.figure(figsize=(8, 6))
     
@@ -53,13 +54,13 @@ def plot_scatter(x, y, title, gamma=None, x_label='x coordinate', y_label='y coo
                        x[y==1, 1],
                        color='blue',
                        marker = 's',
-                       alpha=0.5)
+                       alpha=0.3)
     
     plt.title(title)
     plt.xlabel(x_label)
     plt.ylabel(y_label)    
     gamma_label = mpatches.Patch(color='white', label='gamma')
-    plt.legend([gamma_label,cata, catb],['γ = '+str(gamma), 'Category 1', 'Category 0'])
+    plt.legend([gamma_label,cata, catb],['γ = '+str(gamma), cat1, cat0])
     
     if output == 'show':
         plt.show()
@@ -149,7 +150,7 @@ def filt_imp(X, threshold):
     
     n_cols, n_rows = X.shape        
     print('\n%s columns in dataset removed due to ≤10%% of cells populated.' % dropped_cols)
-    print('\nAfter columns ≤ 10%% populated removed, data contains %s columns and %s rows.' % (n_cols, n_rows))
+    print('\nAfter columns ≤ 10%% populated removed, data contains %s columns and %s rows.' % (n_rows, n_cols))
     
     col_names = list(X)
     
@@ -174,19 +175,19 @@ def filt_imp(X, threshold):
     
     n_cols, n_rows = X.shape
     print('\n%s rows in remaining dataset removed due to ≤10%% of cells populated.' % dropped_rows)
-    print('\nAfter columns and rows ≤ 10%% populated removed, data contains %s columns and %s rows.' % (n_cols, n_rows))
+    print('\nAfter columns and rows ≤ 10%% populated removed, data contains %s columns and %s rows.' % (n_rows, n_cols))
     
     
     # Convert dataframe to numpy matrix for scikit learn
-    X = X.as_matrix()
+    #X = X.as_matrix()
     
     # Uses mean as imputation strategy
-    impute = Imputer(strategy='mean')
+    impute = Imputer(strategy='median')
     X_imputed = impute.fit_transform(X)
     
     #print(X_imputed.shape)
     n_cols, n_rows = X_imputed.shape
-    print('\nAfter imputation, data contains %s columns and %s rows.' % (n_cols, n_rows))
+    print('\nAfter imputation, data contains %s columns and %s rows.' % (n_rows, n_cols))
     
     return(X_imputed)
 
@@ -202,7 +203,7 @@ def writetext(content, filename, path):
 	text_file.write(content)
 	text_file.close()
     
-def m_test5(X, y, gamma, dataset):
+def m_test5(X, y, gamma, dataset, filepath, signifier):
     
     #Record all mean roc_aucs for each gamma value
     auc_mat = []
@@ -222,9 +223,9 @@ def m_test5(X, y, gamma, dataset):
     kpcas.append(('Linear KPCA', 'lin_k', KernelPCA(n_components=2, kernel='linear')))
     kpcas.append(('RBF KPCA', 'rbf_k',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
     kpcas.append(('Laplacian KPCA', 'lap_k',KernelPCA(n_components=2, kernel='precomputed')))    
-    kpcas.append(('Polynomial KPCA', 'ply_k', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
-    kpcas.append(('Sigmoid KPCA', 'sig_k', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
-    kpcas.append(('Cosine KPCA', 'cos_k',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    #kpcas.append(('Polynomial KPCA', 'ply_k', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
+    #kpcas.append(('Sigmoid KPCA', 'sig_k', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    #kpcas.append(('Cosine KPCA', 'cos_k',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
     
     #Initiate models with default parameters
 
@@ -232,14 +233,14 @@ def m_test5(X, y, gamma, dataset):
     
     models.append(('Linear SVM', 'lin_svc', SVC(kernel='linear', probability=True)))
     models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
-    models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
-    models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
-    models.append(('K-Nearest Neighbour', 'knn', KNeighborsClassifier()))
-    models.append(('Logistic Regression', 'log_reg', LogisticRegression()))
-    models.append(('Decision Tree', 'dec_tree', DecisionTreeClassifier()))
+    #models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
+    #models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
+    #models.append(('K-Nearest Neighbour', 'knn', KNeighborsClassifier()))
+    #models.append(('Logistic Regression', 'log_reg', LogisticRegression()))
+    #models.append(('Decision Tree', 'dec_tree', DecisionTreeClassifier()))
     #models.append(('Gaussian Naive Bayes', 'gnb', GaussianNB()))
-    models.append(('Random Forest', 'rf', RandomForestClassifier()))
-    models.append(('Gradient Boosting', 'gb', GradientBoostingClassifier()))
+    #models.append(('Random Forest', 'rf', RandomForestClassifier()))
+    #models.append(('Gradient Boosting', 'gb', GradientBoostingClassifier()))
     
     # Initiate cross-validation
     folds = 10    
@@ -257,19 +258,19 @@ def m_test5(X, y, gamma, dataset):
         else:
             X_kpca = kpca.fit_transform(X)
         
-        '''        
-        p2f.plot_scatter(X_kpca,
+                
+        plot_scatter(X_kpca,
                      y,
                      'First 2 principal components after %s' % kernel,
                      gamma=gamma,
                      x_label='Principal component 1',
                      y_label='Principal component 2',
                      #output = 'show',
-                     output='save',
-                     path='%s%s_%spca_gamma%s.png' % (filepath, nowtime, abbreviation, gamma)
+                     #output='save',
+                     #path='%s%s_%spca_gamma%s_%s.png' % (filepath, nowtime, abbreviation, gamma, signifier)
                      )
         print('\nScatter plot of first two principal components after %s for dataset %s (γ = %s) saved.' % (kernel, dataset, gamma))
-        '''    
+            
         
         kpca_kernels.append(kernel)
     
@@ -325,3 +326,251 @@ def m_test5(X, y, gamma, dataset):
     auc_mat = np.array(auc_mat)
     
     return(auc_mat, kpca_kernels, mdl_names)
+
+#To generate toy datasets based on size of test data
+def toybox_gen(inp_df):
+    
+    
+    #Define size of component using input data
+    cols, rows = inp_df.shape
+    comp_size = [cols, int(round(rows/2))]
+    
+    cov1 = np.array([[[0.3, 0.2], [0.2, 0.2]], [[0.6, 0.4], [0.4, 0.4]], [[1.2, 0.8], [0.8, 0.8]], [[2.4, 1.6], [1.6, 1.6]], [[6, 4], [4, 4]],[[9, 6], [6, 6]]])
+    cov2 = np.array([[12, 8],[8, 8]])
+    
+    mean1 = np.array([[20, 15], [20, 15], [20, 15], [20, 15], [20, 15], [20.5, 15.5]])
+    mean2 = [20, 15]
+    
+    #Set up target array
+    target = np.zeros(100, dtype=int)
+    target[0:50] = '1'
+    
+    dataset_list = []
+    
+    # counter for labelling dataset
+    counter = 1
+    # Second component consistent. Generate first to save time.
+    d2_x, d2_y = multivariate_normal(mean2, cov2, comp_size).T
+    
+    for i in range(len(cov1)):
+        
+        d1_x, d1_y = multivariate_normal(mean1[i], cov1[i], comp_size).T
+        
+        #Put components together
+        mvn_sim = np.vstack((d1_x, d2_x))
+        mvn_sim_df = pd.DataFrame.from_records(mvn_sim)
+        dataset_list.append(('ds%d' % counter, mvn_sim_df))
+        counter += 1
+        
+    return(dataset_list, target)
+    
+def tsplit(inp_df):
+
+    target = inp_df[0].as_matrix()
+    data =  inp_df.drop(columns=0)
+    
+    target = target.astype(int)
+    
+    return(data, target)
+    
+def pca_plot(X, y, dataset, filepath, cat1, cat0):
+    
+    X_rows, X_cols = X.shape
+    
+    #print(X_cols)
+     
+    gamma = 1/X_cols
+    
+    kpcas = []
+    
+    kpca_lap = laplacian_kernel(X, gamma=gamma) 
+    
+    kpcas = []
+    
+    #Use standard PCA for comparison
+    
+    #kpcas.append(('standard ', 'std_', PCA(n_components=2)))
+    
+    #Linear kernal has no need for gamma
+    kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
+    kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
+    kpcas.append(('Laplacian KPCA', 'prec_lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
+    kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
+    kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    
+    for kernel, abbreviation, kpca in kpcas:
+        
+        if kernel == 'Laplacian KPCA':
+            X_kpca = kpca.fit_transform(kpca_lap)
+        else:
+            X_kpca = kpca.fit_transform(X)
+    
+        plot_scatter(X_kpca,
+                         y,
+                         'First 2 principal components after %s' % kernel,
+                         gamma=gamma,
+                         x_label='Principal component 1',
+                         y_label='Principal component 2',
+                         cat1=cat1,
+                         cat0=cat0,
+                         #output = 'show',
+                         output='save',
+                         path='%s%s_%s_%s_gamma%s.png' % (filepath, nowtime, dataset, abbreviation, gamma)
+                         )
+        
+        print('\nScatter plot of first two principal components after %s for dataset %s saved.' % (kernel, dataset))
+        
+def gs_pca_plot(X, y, dataset, filepath, cat1, cat0):
+    
+    X_rows, X_cols = X.shape
+    
+    #print(X_cols)
+     
+    init_gamma = 1/X_cols
+    
+    gamma_list = [init_gamma/10000, init_gamma/1000, init_gamma/100, init_gamma/10, init_gamma, init_gamma*10, init_gamma*100, init_gamma*1000, init_gamma*10000, init_gamma*100000]
+    
+    for gamma in gamma_list:
+    
+        kpcas = []
+        
+        kpca_lap = laplacian_kernel(X, gamma=gamma) 
+        
+        kpcas = []
+        
+        #Use standard PCA for comparison
+        
+        #kpcas.append(('standard ', 'std_', PCA(n_components=2)))
+        
+        #Linear kernal has no need for gamma
+        kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
+        kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
+        #kpcas.append(('Laplacian KPCA', 'prec_lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
+        #kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
+        #kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+        #kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+        
+        for kernel, abbreviation, kpca in kpcas:
+            
+            if kernel == 'Laplacian KPCA':
+                X_kpca = kpca.fit_transform(kpca_lap)
+            else:
+                X_kpca = kpca.fit_transform(X)
+        
+            plot_scatter(X_kpca,
+                             y,
+                             'First 2 principal components after %s' % kernel,
+                             gamma=gamma,
+                             x_label='Principal component 1',
+                             y_label='Principal component 2',
+                             cat1=cat1,
+                             cat0=cat0,
+                             #output = 'show',
+                             output='save',
+                             path='%s%s_%s_%s_gamma%s.png' % (filepath, nowtime, dataset, abbreviation, gamma)
+                             )
+            
+            print('\nScatter plot of first two principal components after %s for dataset %s with gamma = %s saved.' % (kernel, dataset, gamma))
+
+#To generate toy datasets based on size and covariance of test data
+def toybox_gen_2(inp_df):
+    
+    
+    #Define size of component using input data
+    cols, rows = inp_df.shape
+    comp_size = [cols, int(round(rows/2))]
+    
+    df_cov = np.cov(inp_df)
+    
+    cov1 = np.array([df_cov/40, df_cov/20, df_cov/10, df_cov/5, df_cov/2, df_cov/1.5, df_cov/1.5])
+    cov2 = np.array(df_cov)
+    
+    init_mean = inp_df.mean(axis=1).tolist()
+    #init_mean = init_mean[0]
+    
+    mean1 = np.array([init_mean, init_mean, init_mean, init_mean, init_mean, init_mean, init_mean,])
+    mean2 =  init_mean
+    
+    #Set up target array
+    target = np.zeros(100, dtype=int)
+    target[0:50] = '1'
+    
+    dataset_list = []
+    
+    # counter for labelling dataset
+    counter = 1
+    # Second component consistent. Generate first to save time.
+    d2_x, d2_y = multivariate_normal(mean2, cov2, comp_size).T
+    
+    for i in range(len(cov1)):
+        
+        d1_x, d1_y = multivariate_normal(mean1[i], cov1[i], comp_size).T
+        
+        #Put components together
+        mvn_sim = np.vstack((d1_x, d2_x))
+        mvn_sim_df = pd.DataFrame.from_records(mvn_sim)
+        dataset_list.append(('ds00%d' % counter, mvn_sim_df))
+        counter += 1
+        
+    return(dataset_list, target)
+
+def nearestPD(A):
+    """Find the nearest positive-definite matrix to input
+
+    A Python/Numpy port of John D'Errico's `nearestSPD` MATLAB code [1], which
+    credits [2].
+
+    [1] https://www.mathworks.com/matlabcentral/fileexchange/42885-nearestspd
+
+    [2] N.J. Higham, "Computing a nearest symmetric positive semidefinite
+    matrix" (1988): https://doi.org/10.1016/0024-3795(88)90223-6
+    """
+
+    B = (A + A.T) / 2
+    _, s, V = la.svd(B)
+
+    H = np.dot(V.T, np.dot(np.diag(s), V))
+
+    A2 = (B + H) / 2
+
+    A3 = (A2 + A2.T) / 2
+
+    if isPD(A3):
+        return A3
+
+    spacing = np.spacing(la.norm(A))
+    # The above is different from [1]. It appears that MATLAB's `chol` Cholesky
+    # decomposition will accept matrixes with exactly 0-eigenvalue, whereas
+    # Numpy's will not. So where [1] uses `eps(mineig)` (where `eps` is Matlab
+    # for `np.spacing`), we use the above definition. CAVEAT: our `spacing`
+    # will be much larger than [1]'s `eps(mineig)`, since `mineig` is usually on
+    # the order of 1e-16, and `eps(1e-16)` is on the order of 1e-34, whereas
+    # `spacing` will, for Gaussian random matrixes of small dimension, be on
+    # othe order of 1e-16. In practice, both ways converge, as the unit test
+    # below suggests.
+    I = np.eye(A.shape[0])
+    k = 1
+    while not isPD(A3):
+        mineig = np.min(np.real(la.eigvals(A3)))
+        A3 += I * (-mineig * k**2 + spacing)
+        k += 1
+
+    return A3
+
+def isPD(B):
+    """Returns true when input is positive-definite, via Cholesky"""
+    try:
+        _ = la.cholesky(B)
+        return True
+    except la.LinAlgError:
+        return False
+
+if __name__ == '__main__':
+    import numpy as np
+    for i in xrange(10):
+        for j in xrange(2, 100):
+            A = np.random.randn(j, j)
+            B = nearestPD(A)
+            assert(isPD(B))
+    print('unit test passed!')

@@ -44,49 +44,63 @@ nowdate = now.strftime("%Y-%m-%d")
 nowtime = now.strftime("%H-%M")
 
 # Name of script to trace where images came from
-scriptname = 'roc_kpca2_2'
+scriptname = 'roc_kpca2_2_mesa'
 
 #List of toy datasets to test
 dataset_list = ['022', '023', '024']
 #dataset_list = ['024']
+dataset_list = ['MESA']
 
 for dataset in dataset_list: 
 
     #Create directory if directory does not exist
-    filepath = '../../figs/out/%s/%s/%s/' % (scriptname, nowdate, dataset)
+    filepath = '../../figs/out/%s/%s/mesa/' % (scriptname, nowdate)
     
     if not os.path.exists(filepath):
         os.makedirs(filepath)
     
     #Import toy data and target
-    X = pd.read_csv('../../data/simulated/mvnsim/mvnsim' + dataset + '.csv', sep=',', header=0, index_col=0)
-    y = np.load('../../data/simulated/mvnsim/target' + dataset + '.npy')
-    print(y)
-    print(y.shape)
-    print(X)
+    inp_df = pd.read_csv('../../data/mesa/MESA_CPMG_MBINV2_ManuallyBinnedData_BatchCorrected_LogTransformed_1stcolOC.csv', header=None, index_col=0, sep=',')
+    #y = np.load('../../data/simulated/mvnsim/target' + dataset + '.npy')
     
-    '''
+    #print(inp_df)
     
-    distribution_boxplot(X,
+    X_imp = p2f.filt_imp(inp_df, 0.1)
+    
+    X_imp_df = pd.DataFrame.from_records(X_imp)
+    
+    print(X_imp_df)
+    
+    X, y = p2f.tsplit(X_imp_df)
+    y = y.astype(int)
+    n_cols, n_rows = X.shape
+    
+    
+    '''    
+    p2f.distribution_boxplot(X,
                          y,
                          "Initial category 1 distribution of dataset %s" % dataset,
                          "Initial category 0 distribution of dataset %s" % dataset,
-                         output='show'
+                         #output='show',
                          #output='plotly',
                          #ply_title="Initial distribution of dataset %s" % dataset,
-                         #output='save',
-                         #path='%sinitialdist.png' % filepath,
+                         output='save',
+                         path='%sinitialdist.png' % filepath,
                          )
     
     print('\nBoxplot of initial data for dataset %s saved.' % dataset)
+    
+    '''
     
     ## PREPROCESSING ##
     
     #Scale initial data to centre data
     
     X_scaled = scale(X)
-    X_scaled_df = pd.DataFrame.from_records(X_scaled)
-    '''
+    print('\nData have been scaled')
+    #print(X_scaled)
+    #X_scaled_df = pd.DataFrame.from_records(X_scaled)
+    
     '''
     distribution_boxplot(X_scaled_df,
                          y,
@@ -99,17 +113,17 @@ for dataset in dataset_list:
     #print(X_scaled.shape)
     print('\nBoxplot of scaled data for dataset %s saved.' % dataset)
     '''
-    '''
+    
     #Initiate KPCAwith various kernels
     
     # As I'm using 500 variables, 0.002 is the default gamma (1/n_variables)
     # I only explicitly state it at this point so I can display it on graphs
-    gamma = 0.002
+    gamma = 1/n_cols
     
     #compute kernels not preloaded into kpca
     #laplacian
-    kpca_lap = laplacian_kernel(X, gamma=gamma) 
-    kpca_chi = chi2_kernel(X, gamma=gamma)
+    kpca_lap = laplacian_kernel(X_scaled, gamma=gamma) 
+    #kpca_chi = chi2_kernel(X, gamma=gamma)
     
     kpcas = []
     
@@ -121,7 +135,7 @@ for dataset in dataset_list:
     kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
     kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
     kpcas.append(('Laplacian KPCA', 'prec_lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
-    kpcas.append(('Chi Squared KPCA', 'prec_chi_kpca',KernelPCA(n_components=2, kernel='precomputed')))
+    #kpcas.append(('Chi Squared KPCA', 'prec_chi_kpca',KernelPCA(n_components=2, kernel='precomputed')))
     kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
     kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
     kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
@@ -151,10 +165,10 @@ for dataset in dataset_list:
         # To utilise precomputed kernel(s)
         if kernel == 'Laplacian KPCA':
             X_kpca = kpca.fit_transform(kpca_lap)
-        elif kernel == 'Chi Squared KPCA':
-            X_kpca = kpca.fit_transform(kpca_chi)
+        #elif kernel == 'Chi Squared KPCA':
+        #    X_kpca = kpca.fit_transform(kpca_chi)
         else:
-            X_kpca = kpca.fit_transform(X)
+            X_kpca = kpca.fit_transform(X_scaled)
     
         p2f.plot_scatter(X_kpca,
                          y,
@@ -168,7 +182,7 @@ for dataset in dataset_list:
                          )
         
         print('\nScatter plot of first two principal components after %s for dataset %s saved.' % (kernel, dataset))
-      
+    
         kpca_kernels.append(kernel)
     
     
@@ -197,7 +211,7 @@ for dataset in dataset_list:
                 roc_auc = auc(fpr, tpr)
                 aucs.append(roc_auc)
                 plt.plot(fpr, tpr, lw=1, alpha=0.3,
-                         label='ROC fold %d (AUC = %0.2f)' % (i, roc_auc))
+                         label='ROC fold %d (AUC = %0.2f)' % (i+1, roc_auc))
     
                 i += 1
     
@@ -229,8 +243,8 @@ for dataset in dataset_list:
             plt.savefig('%s%s_roc_%s_gamma%s.png' % (filepath, nowtime, abbreviation, gamma))
             plt.close()
 
-
-    '''
+    
+            
 #Calculate and display time taken or script to run
 EndTime = (time.time() - StartTime)
 print('\nTime taken for script to run is %.2f seconds\n' % EndTime)

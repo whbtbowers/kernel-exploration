@@ -38,8 +38,8 @@ nowtime = now.strftime("%H-%M")
 scriptname = 'modeltest5'
 
 #List of toy datasets to test
-dataset_list = ['022', '023', '024']
-#dataset_list = ['022']
+#dataset_list = ['022', '023', '024']
+dataset_list = ['022']
 #dataset_list = ['mesa']
 
 #provide values of gamma to test for all kernel methods
@@ -88,7 +88,7 @@ for dataset in dataset_list:
     
     for gamma in t1_gamma_list:
         
-        t1_auc_mat, t1_kpcas, t1_models  = p2f.m_test5(X_scaled, y, gamma, dataset)
+        t1_auc_mat, t1_kpcas, t1_models  = p2f.m_test5(X_scaled, y, gamma, dataset, filepath, 'tier1')
         
         t1_mmas.append(t1_auc_mat.mean())
     
@@ -119,9 +119,9 @@ t1_gamma_consensus = max(t1_gcount_dict, key=t1_gcount_dict.get)
 if t1_gamma_consensus == t1_gamma_list[-1]:
     t1_gamma_consensus = t1_gamma_list[-2]
 
-# Greate tier 2 gamma list
-gamma_i = t1_gamma_list.index(t1_gamma_consensus)
-t2_gamma_list = list(p2f.frange(t1_gamma_list[gamma_i], t1_gamma_list[gamma_i+1], t1_gamma_list[gamma_i]))
+# Create tier 2 gamma list
+gamma_i_t1 = t1_gamma_list.index(t1_gamma_consensus)
+t2_gamma_list = list(p2f.frange(t1_gamma_list[gamma_i_t1], t1_gamma_list[gamma_i_t1+1], t1_gamma_list[gamma_i_t1]))
 
 
  
@@ -141,7 +141,7 @@ for dataset, X, y in datalist:
     
     for gamma in t2_gamma_list:
         
-        t2_auc_mat, t2_kpcas, t2_models  = p2f.m_test5(X_scaled, y, gamma, dataset)
+        t2_auc_mat, t2_kpcas, t2_models  = p2f.m_test5(X_scaled, y, gamma, dataset, filepath, 'tier2')
         
         t2_mmas.append(t2_auc_mat.mean())
     
@@ -152,8 +152,8 @@ for dataset, X, y in datalist:
             opt_t2_gamma = t2_gamma_list[i]
             
     # Show optimal gamma
-    opt_t2_gammas.append(opt_t2_gamma)
-
+    #opt_t2_gammas.append(opt_t2_gamma)
+'''
 # End of dataset run        
 print('\n###################################################################\n')
 
@@ -167,7 +167,12 @@ t2_gcount_dict = dict((x,opt_t2_gammas.count(x)) for x in set(opt_t2_gammas))
 # Find most frequent gamma value
 t2_gamma_consensus = max(t2_gcount_dict, key=t2_gcount_dict.get)
 
-print("\nOptimal gamma parameter after 2-tiered grid search: %s" % t2_gamma_consensus) 
+#print("\nOptimal gamma parameter after 2-tiered grid search: %s" % t2_gamma_consensus)
+
+# Create tier 2 gamma list
+gamma_i_t2 = t1_gamma_list.index(t1_gamma_consensus)
+'''
+
 
 #Calculate and display time taken or script to run
 EndTime = (time.time() - StartTime)
