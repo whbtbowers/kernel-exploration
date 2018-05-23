@@ -40,13 +40,11 @@ X = pd.read_csv('../../data/mesa/MESA_CPMG_MBINV2_ManuallyBinnedData_BatchCorrec
 
 X_imp = p2f.filt_imp(X, 0.1)
 
-X_imp_df = pd.DataFrame.from_records(X_imp)
-
-X, y = p2f.tsplit(X_imp_df)
+X, y = p2f.tsplit(X_imp)
 
 X_scaled = scale(X)
 
-dataset_list, y = p2f.toybox_gen_2(X_scaled)
+dataset_list, y = p2f.toybox_gen(X_scaled)
 
 print(dataset_list)
 

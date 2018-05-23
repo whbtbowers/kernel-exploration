@@ -4,9 +4,8 @@ from numpy.random import multivariate_normal
 import p2funcs as p2f
 
 inp_df = pd.read_csv('../../data/mesa/MESA_CPMG_MBINV2_ManuallyBinnedData_BatchCorrected_LogTransformed_Data.csv', sep=',')        
-inp_df = p2f.filt_imp(inp_df, 0.1)
-
-
+imp_df = p2f.filt_imp(inp_df, 0.1)
+'''
 def toybox_gen(inp_df):
     
     
@@ -42,8 +41,11 @@ def toybox_gen(inp_df):
         counter += 1
         
     return(dataset_list, target)
+'''
+ds_list, y = p2f.toybox_gen(imp_df)
 
-ds_list, y = toybox_gen(inp_df)
 
-for label, dataset in ds_list:
-    print(label)    
+print ('Length of y: %s' % len(y))
+
+print ('SHAPE of X: ')
+print(ds_list[0][1].shape)

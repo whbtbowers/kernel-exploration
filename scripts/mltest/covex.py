@@ -10,8 +10,8 @@ import p2funcs as p2f
 import numpy as np
 import pandas as pd
 
-from scipy.stats import multivariate_normal
-#from numpy.random import multivariate_normal
+#from scipy.stats import multivariate_normal
+from numpy.random import multivariate_normal
 from numpy.linalg import cholesky
 
 X = pd.read_csv('../../data/mesa/MESA_CPMG_MBINV2_ManuallyBinnedData_BatchCorrected_LogTransformed_1stcol_diabetes.csv', sep=',', header=None, index_col=0)
@@ -36,9 +36,11 @@ X_cov_pd = p2f.nearestPD(X_cov)
 p2f.isPD(X_cov_pd)
 #print(X_cov.shape)
 #numpy format
-#d2_x, d2_y = multivariate_normal(means, X_cov, [n_cols, n_rows], check_valid='ignore').T  
+d2_x = multivariate_normal(means, X_cov, n_cols)
+
+print(d2_x.shape)
 
 #scipy format
-d2_x, d2_y = multivariate_normal([n_cols, n_rows], means, X_cov_pd).T  
+#d2_x, d2_y = multivariate_normal([n_cols, n_rows], means, X_cov_pd).T  
 
 #print(d2_X)

@@ -29,7 +29,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import SVC
-from sklearn.metrics.pairwise import laplacian_kernel, chi2_kernel
+from sklearn.metrics.pairwise import laplacian_kernel, chi2_kernel, polynomial_kernel
 
 
 from scipy import interp
@@ -38,8 +38,14 @@ from scipy import interp
 now = datetime.datetime.now()
 nowdate = now.strftime("%Y-%m-%d")
 nowtime = now.strftime("%H-%M")
+    
 
-def plot_scatter(x, y, title, gamma=None, x_label='x coordinate', y_label='y coordinate', cat1='Category 1', cat0='Category 0', output=None, path=None, ply_title=None):
+def plot_write(content, path):
+    text_file = open(path, "a") 
+    text_file.write(content)
+    text_file.close()
+    
+def plot_scatter(x, y, title, gamma=None, x_label='x coordinate', y_label='y coordinate', cat1='Category 1', cat0='Category 0', output=None, path=None, writepath=None, dataset=None, kernel=None):
     
     fig = plt.figure(figsize=(8, 6))
     
@@ -50,17 +56,22 @@ def plot_scatter(x, y, title, gamma=None, x_label='x coordinate', y_label='y coo
                        alpha=0.5
                        )
     
+   
+    
     catb = plt.scatter(x[y==1, 0],
                        x[y==1, 1],
                        color='blue',
                        marker = 's',
-                       alpha=0.3)
+                       alpha=0.3
+                       )
+    
+   
     
     plt.title(title)
     plt.xlabel(x_label)
     plt.ylabel(y_label)    
     gamma_label = mpatches.Patch(color='white', label='gamma')
-    plt.legend([gamma_label,cata, catb],['γ = '+str(gamma), cat1, cat0])
+    plt.legend([gamma_label,cata, catb],['γ = '+str(gamma), cat0, cat1])
     
     if output == 'show':
         plt.show()
@@ -117,7 +128,7 @@ def filt_imp(X, threshold):
     
     # Display metrics for initial data
     n_cols, n_rows = X.shape
-    print('\nInitial data contains %s columns and %s rows.' % (n_cols, n_rows))
+    print('\nInitial data contains %s columns and %s rows.' % (n_rows, n_cols))
     col_names = list(X)
     #print('Categories:')
     #print(col_names)
@@ -184,24 +195,18 @@ def filt_imp(X, threshold):
     # Uses mean as imputation strategy
     impute = Imputer(strategy='median')
     X_imputed = impute.fit_transform(X)
-    
+    X_imputed_df = pd.DataFrame.from_records(X_imputed)
     #print(X_imputed.shape)
     n_cols, n_rows = X_imputed.shape
     print('\nAfter imputation, data contains %s columns and %s rows.' % (n_rows, n_cols))
     
-    return(X_imputed)
+    return(X_imputed_df)
 
 # Like range but for floats
 def frange(x, y, jump):
   while x < y:
     yield x
-    x += jump    
-
-def writetext(content, filename, path):
-	os.chdir(path)
-	text_file = open(filename, "w")
-	text_file.write(content)
-	text_file.close()
+    x += jump
     
 def m_test5(X, y, gamma, dataset, filepath, signifier):
     
@@ -327,42 +332,57 @@ def m_test5(X, y, gamma, dataset, filepath, signifier):
     
     return(auc_mat, kpca_kernels, mdl_names)
 
-#To generate toy datasets based on size of test data
+#To generate toy datasets based on size and covariance of test data
 def toybox_gen(inp_df):
     
-    
     #Define size of component using input data
+    inp_df = inp_df.T
     cols, rows = inp_df.shape
-    comp_size = [cols, int(round(rows/2))]
+    df_cov = np.cov(inp_df)
+    print('\nCovariance calculated\n')
     
-    cov1 = np.array([[[0.3, 0.2], [0.2, 0.2]], [[0.6, 0.4], [0.4, 0.4]], [[1.2, 0.8], [0.8, 0.8]], [[2.4, 1.6], [1.6, 1.6]], [[6, 4], [4, 4]],[[9, 6], [6, 6]]])
-    cov2 = np.array([[12, 8],[8, 8]])
+    #cov1 = np.array([df_cov/40, df_cov/20, df_cov/10, df_cov/5, df_cov/2, df_cov/1.5, df_cov/1.5])
+    cov1 = np.array([df_cov/40])
+    cov2 = np.array(df_cov)
     
-    mean1 = np.array([[20, 15], [20, 15], [20, 15], [20, 15], [20, 15], [20.5, 15.5]])
-    mean2 = [20, 15]
+   
+    init_mean = inp_df.mean(axis=1).tolist()
+    print('Means calculated\n')
     
-    #Set up target array
-    target = np.zeros(100, dtype=int)
-    target[0:50] = '1'
-    
+    #mean1 = np.array([init_mean, init_mean, init_mean, init_mean, init_mean, init_mean, np.add(init_mean, 0.5)])
+    mean1 = np.array([init_mean])
+    mean2 =  init_mean
+        
     dataset_list = []
     
     # counter for labelling dataset
     counter = 1
+    
     # Second component consistent. Generate first to save time.
-    d2_x, d2_y = multivariate_normal(mean2, cov2, comp_size).T
+    d2_x = multivariate_normal(mean2, cov2, int(round(rows/2)))
+    d2rows, d2cols = d2_x.shape
+    
+    #Set up target array
+    target = np.zeros(d2rows*2, dtype=int)
+    target[0:int(round(d2rows))] = '1'
+    print('Toy outcomes generated\n') 
     
     for i in range(len(cov1)):
         
-        d1_x, d1_y = multivariate_normal(mean1[i], cov1[i], comp_size).T
+        d1_x= multivariate_normal(mean1[i], cov1[i], int(round(rows/2)))
+        
         
         #Put components together
         mvn_sim = np.vstack((d1_x, d2_x))
         mvn_sim_df = pd.DataFrame.from_records(mvn_sim)
-        dataset_list.append(('ds%d' % counter, mvn_sim_df))
+        dataset_list.append(('ds00%d' % counter, mvn_sim_df))
+        print('Toy dataset ds%d generated' % counter)
         counter += 1
-        
+
+       
+    
     return(dataset_list, target)
+    
     
 def tsplit(inp_df):
 
@@ -472,105 +492,610 @@ def gs_pca_plot(X, y, dataset, filepath, cat1, cat0):
                              )
             
             print('\nScatter plot of first two principal components after %s for dataset %s with gamma = %s saved.' % (kernel, dataset, gamma))
+    
+def m_test5_2(X, y, gamma, dataset, filepath, signifier):
+    
+    #Record all mean roc_aucs for each gamma value
+    auc_mat = []
 
-#To generate toy datasets based on size and covariance of test data
-def toybox_gen_2(inp_df):
     
+    #compute kernels not preloaded into kpca
+    #laplacian
+    K_lap = laplacian_kernel(X, gamma=gamma)
+    # Quadratic
+    K_ply = polynomial_kernel(X=X, degree=2, gamma=gamma)
     
-    #Define size of component using input data
-    cols, rows = inp_df.shape
-    comp_size = [cols, int(round(rows/2))]
+    kpcas = []
+
+    #Use standard PCA for comparison
     
-    df_cov = np.cov(inp_df)
+    #kpcas.append(('standard PCA', 'std_', PCA(n_components=2)))
     
-    cov1 = np.array([df_cov/40, df_cov/20, df_cov/10, df_cov/5, df_cov/2, df_cov/1.5, df_cov/1.5])
-    cov2 = np.array(df_cov)
+    #Linear kernal has no need for gamma
+    #kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
+    kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
+    #kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))    
+    #kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='precomputed')))
+    #kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    #kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
     
-    init_mean = inp_df.mean(axis=1).tolist()
-    #init_mean = init_mean[0]
+    #Initiate models with default parameters
+
+    models = []
     
-    mean1 = np.array([init_mean, init_mean, init_mean, init_mean, init_mean, init_mean, init_mean,])
-    mean2 =  init_mean
+    models.append(('Linear SVM', 'lin_svc', SVC(kernel='linear', probability=True)))
+    #models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
+    #models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
+    #models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
     
-    #Set up target array
-    target = np.zeros(100, dtype=int)
-    target[0:50] = '1'
+    # Initiate cross-validation
+    folds = 10    
+    cv = StratifiedKFold(n_splits=folds, random_state=10)
     
-    dataset_list = []
+    # Declare KPCA kernels deployed
+
+    kpca_kernels = []
     
-    # counter for labelling dataset
-    counter = 1
-    # Second component consistent. Generate first to save time.
-    d2_x, d2_y = multivariate_normal(mean2, cov2, comp_size).T
-    
-    for i in range(len(cov1)):
+    for kernel, abbreviation, kpca in kpcas:
         
-        d1_x, d1_y = multivariate_normal(mean1[i], cov1[i], comp_size).T
+        # To utilise precomputed kernel(s)
+        if kernel == 'Laplacian KPCA':
+            X_kpca = kpca.fit_transform(K_lap)
+        elif kernel == 'Polynomial KPCA':
+            X_kpca = kpca.fit_transform(K_ply)
+        else:
+            X_kpca = kpca.fit_transform(X)
         
-        #Put components together
-        mvn_sim = np.vstack((d1_x, d2_x))
-        mvn_sim_df = pd.DataFrame.from_records(mvn_sim)
-        dataset_list.append(('ds00%d' % counter, mvn_sim_df))
-        counter += 1
+                
+        plot_scatter(X_kpca,
+                     y,
+                     'First 2 principal components after %s' % kernel,
+                     gamma=gamma,
+                     x_label='Principal component 1',
+                     y_label='Principal component 2',
+                     #output = 'show',
+                     output='save',
+                     path='%s%s_%s_%sgamma%s.png' % (filepath, nowtime, abbreviation, signifier, gamma)
+                     )
+        print('\nScatter plot of first two principal components after %s for dataset %s (γ = %s) saved.' % (kernel, dataset, gamma))
+            
         
-    return(dataset_list, target)
+        kpca_kernels.append(kernel)
+    
+        # Declare names of models deployed
+        mdl_names = []        
+        
+        #Record mean_aucs
+        auc_mat_row = []
+               
+        for model_name, model_abv, model in models:
+            
+            tprs = []
+            aucs = []
+            mean_fpr = np.linspace(0, 1, 100)
+            
+            mdl_names.append(model_name)
+            print('\nPerforming %s followed by %s for dataset %s\n' % (kernel, model_name, dataset))
+            #print(mdl_names)
+    
+            # To count number of folds
+            i = 0
+            
+            for train, test in cv.split(X_kpca, y):
+    
+                probas_ = model.fit(X_kpca[train], y[train]).predict_proba(X_kpca[test])
+    
+                # Compute ROC curve and area the curve
+    
+                fpr, tpr, thresholds = roc_curve(y[test], probas_[:, 1])
+                tprs.append(interp(mean_fpr, fpr, tpr))
+                tprs[-1][0] = 0.0
+                roc_auc = auc(fpr, tpr)
+                aucs.append(roc_auc)
+    
+                i += 1
+    
+            mean_tpr = np.mean(tprs, axis=0)
+            mean_tpr[-1] = 1.0
+            mean_auc = auc(mean_fpr, mean_tpr)
+            auc_mat_row.append(mean_auc)
+            std_auc = np.std(aucs)
+                
+            std_tpr = np.std(tprs, axis=0)
+            tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
+            tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
+    
+               
+            # Display mean roc auc
+            #print("Mean area under curve for %s followed by %s (γ = %s): %0.2f" % (kernel, model_name, gamma, mean_auc))
+    
+        auc_mat.append(auc_mat_row)     
 
-def nearestPD(A):
-    """Find the nearest positive-definite matrix to input
+    auc_mat = np.array(auc_mat)
+    
+    return(auc_mat, kpca_kernels, mdl_names)
+    
+def m_test5_2_rocplot(X, y, gamma, dataset, filepath, signifier, jspath):
+    
+    #Record all mean roc_aucs for each gamma value
+    auc_mat = []
 
-    A Python/Numpy port of John D'Errico's `nearestSPD` MATLAB code [1], which
-    credits [2].
+    
+    #compute kernels not preloaded into kpca
+    #laplacian
+    K_lap = laplacian_kernel(X, gamma=gamma)
+    
+    kpcas = []
 
-    [1] https://www.mathworks.com/matlabcentral/fileexchange/42885-nearestspd
+    #Use standard PCA for comparison
+    
+    #kpcas.append(('standard PCA', 'std_', PCA(n_components=2)))
+    
+    #Linear kernal has no need for gamma
+    #kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
+    kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
+    #kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))    
+    #kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
+    #kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    #kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    
+    #Initiate models with default parameters
 
-    [2] N.J. Higham, "Computing a nearest symmetric positive semidefinite
-    matrix" (1988): https://doi.org/10.1016/0024-3795(88)90223-6
-    """
+    models = []
+    
+    models.append(('Linear SVM', 'lin_svc', SVC(kernel='linear', probability=True)))
+    #models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
+    #models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
+    #models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
+    
+    # Initiate cross-validation
+    folds = 10    
+    cv = StratifiedKFold(n_splits=folds, random_state=10)
+    
+    # Declare KPCA kernels deployed
 
-    B = (A + A.T) / 2
-    _, s, V = la.svd(B)
+    kpca_kernels = []
+    
+    for kernel, abbreviation, kpca in kpcas:
+        
+        # To utilise precomputed kernel(s)
+        if kernel == 'Laplacian KPCA':
+            X_kpca = kpca.fit_transform(K_lap)
+        else:
+            X_kpca = kpca.fit_transform(X)
+        
+                
+        plot_scatter(X_kpca,
+                     y,
+                     'First 2 principal components after %s' % kernel,
+                     gamma=gamma,
+                     x_label='Principal component 1',
+                     y_label='Principal component 2',
+                     #output = 'show',
+                     output='save',
+                     path='%s%s_%s_%sgamma%s.png' % (filepath, nowtime, abbreviation, signifier, gamma)
+                     )
+        print('\nScatter plot of first two principal components after %s for dataset %s (γ = %s) saved.' % (kernel, dataset, gamma))
+            
+        
+        kpca_kernels.append(kernel)
+    
+        # Declare names of models deployed
+        mdl_names = []        
+        
+        #Record mean_aucs
+        auc_mat_row = []
+               
+        for model_name, model_abv, model in models:
+            
+            raw_tprs = []
+            raw_fprs = []
+            tprs = []
+            aucs = []
+            mean_fpr = np.linspace(0, 1, 100)
+            
+            mdl_names.append(model_name)
+            print('\nPerforming %s followed by %s for dataset %s\n' % (kernel, model_name, dataset))
+            #print(mdl_names)
+    
+            # To count number of folds
+            i = 0
+            
+            #Initiate plot
+            fig = plt.figure(figsize=(15, 9))
+            
+            for train, test in cv.split(X_kpca, y):
+    
+                probas_ = model.fit(X_kpca[train], y[train]).predict_proba(X_kpca[test])
+    
+                # Compute ROC curve and area the curve
+    
+                fpr, tpr, thresholds = roc_curve(y[test], probas_[:, 1])
+                tprs.append(interp(mean_fpr, fpr, tpr))
+                tprs[-1][0] = 0.0
+                roc_auc = auc(fpr, tpr)
+                raw_tprs.append(tpr)
+                raw_fprs.append(fpr)
+                aucs.append(roc_auc)
+                plt.plot(fpr, tpr, lw=1, alpha=0.3,
+                         label='ROC fold %d (AUC = %0.2f)' % (i+1, roc_auc))
+    
+                i += 1
+    
+            plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r',
+                     label='Luck', alpha=.8)
+    
+            mean_tpr = np.mean(tprs, axis=0)
+            mean_tpr[-1] = 1.0
+            mean_auc = auc(mean_fpr, mean_tpr)
+            auc_mat_row.append(mean_auc)
+            std_auc = np.std(aucs)
+            plt.plot(mean_fpr, mean_tpr, color='b',
+                     label=r'Mean ROC (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc),
+                     lw=2, alpha=.8)
+    
+            std_tpr = np.std(tprs, axis=0)
+            tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
+            tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
+            plt.fill_between(mean_fpr, tprs_lower, tprs_upper, color='grey', alpha=.2,
+                             label=r'$\pm$ 1 std. dev.')
+    
+            plt.xlim([-0.05, 1.05])
+            plt.ylim([-0.05, 1.05])
+            plt.xlabel('False Positive Rate')
+            plt.ylabel('True Positive Rate')
+            plt.title('Receiver operating characteristic (Using %sPCA with %s, γ = %s)' % (kernel, model_name, gamma))
+            plt.legend()
+            #plt.show()
+            plt.savefig('%s%sroc_%s_%s_%s_gamma%s.png' % (filepath, nowtime, abbreviation, model_abv, signifier, gamma))
+            plt.close()
+            
+            trace_list, traces = js_fold_line(raw_tprs, raw_fprs)
+            trace_list, traces = js_mean_trace(mean_fpr, mean_tpr, trace_list, traces)
+            trace_list, traces = js_luck_trace(trace_list, traces)
+            trace_list, traces = js_tpr_std(tprs_upper, tprs_lower, mean_fpr, trace_list, traces)
+            
+            js_construct_roc('ROCPLOT', 'rocplot%s_%s_%s_%s' % (nowtime, dataset, abbreviation, model_abv), trace_list, traces, '%s%s_%s_%s_gamma%s_roc.js' % (jspath, nowtime, kernel, model_name, gamma))
+    
+    return(auc_mat, kpca_kernels, mdl_names)
+    
+def m_run5_3(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, signifier):
+    
+    #Record AUC
+    mean_auc = []
+    
+    #compute kernels not preloaded into kpca
+    #laplacian
+    K_lap = laplacian_kernel(X, gamma=gamma)
+    # Quadratic
+    K_ply = polynomial_kernel(X=X, degree=2, gamma=gamma)
+    
+    kpcas = []
+    
+    kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
+    kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
+    kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))    
+    kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='precomputed')))
+    kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    
+    #Initiate models with default parameters
 
-    H = np.dot(V.T, np.dot(np.diag(s), V))
+    models = []
+    
+    models.append(('Linear SVM', 'lin_svc', SVC(kernel='linear', probability=True)))
+    models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
+    models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
+    models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
+    
+    # Initiate cross-validation
+    folds = 10    
+    cv = StratifiedKFold(n_splits=folds, random_state=10)
+    
+    # Declare KPCA kernel and model deployed
 
-    A2 = (B + H) / 2
+    kpca_kernel = 0
+    mdl_name = 0
+    
+    for kernel, abbreviation, kpca in kpcas:
+        
+        if opt_kernel == kernel:
+            
+            kpca_kernels = kernel
+            # To utilise precomputed kernel(s)
+            if kernel == 'Laplacian KPCA':
+                X_kpca = kpca.fit_transform(K_lap)
+            elif kernel == 'Polynomial KPCA':
+                X_kpca = kpca.fit_transform(K_ply)
+            else:
+                X_kpca = kpca.fit_transform(X)
+            
+                    
+            plot_scatter(X_kpca,
+                         y,
+                         'First 2 principal components after %s' % kernel,
+                         gamma=gamma,
+                         x_label='Principal component 1',
+                         y_label='Principal component 2',
+                         #output = 'show',
+                         output='save',
+                         path='%s%s_%s_%sgamma%s.png' % (filepath, nowtime, abbreviation, signifier, gamma)
+                         )
+            print('\nScatter plot of first two principal components after %s for dataset %s (γ = %s) saved.' % (kernel, dataset, gamma))
+                
+            
+        
+            # Declare names of models deployed
+            mdl_names = []        
+            
+            #Record mean_aucs
+            auc_mat_row = []
+                   
+            for model_name, model_abv, model in models:
+                
+                if opt_model == model_name:
+                
+                    tprs = []
+                    aucs = []
+                    mean_fpr = np.linspace(0, 1, 100)
+                    
+                    mdl_name = model_name
+                    
+                    print('\nPerforming %s followed by %s for dataset %s\n' % (kernel, model_name, dataset))
+                    #print(mdl_names)
+            
+                    # To count number of folds
+                    i = 0
+                    
+                    for train, test in cv.split(X_kpca, y):
+            
+                        probas_ = model.fit(X_kpca[train], y[train]).predict_proba(X_kpca[test])
+            
+                        # Compute ROC curve and area the curve
+            
+                        fpr, tpr, thresholds = roc_curve(y[test], probas_[:, 1])
+                        tprs.append(interp(mean_fpr, fpr, tpr))
+                        tprs[-1][0] = 0.0
+                        roc_auc = auc(fpr, tpr)
+                        aucs.append(roc_auc)
+            
+                        i += 1
+            
+                    mean_tpr = np.mean(tprs, axis=0)
+                    mean_tpr[-1] = 1.0
+                    mean_auc = auc(mean_fpr, mean_tpr)
+                    auc_mat_row.append(mean_auc)
+                    std_auc = np.std(aucs)
+                        
+                    std_tpr = np.std(tprs, axis=0)
+                    tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
+                    tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
+            
+                       
+                    # Display mean roc auc
+                    #print("Mean area under curve for %s followed by %s (γ = %s): %0.2f" % (kernel, model_name, gamma, mean_auc))
+            
 
-    A3 = (A2 + A2.T) / 2
+    
+    return(mean_auc, kpca_kernels, mdl_names)
+    
+def m_run5_3_rocplot(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, signifier, jspath):
+    
+    #Record AUC
+    mean_auc = []
+    
+    #compute kernels not preloaded into kpca
+    #laplacian
+    K_lap = laplacian_kernel(X, gamma=gamma)
+    # Quadratic
+    K_ply = polynomial_kernel(X=X, degree=2, gamma=gamma)
+    
+    kpcas = []
+    
+    kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
+    kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
+    kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))    
+    kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='precomputed')))
+    kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    
+    #Initiate models with default parameters
 
-    if isPD(A3):
-        return A3
+    models = []
+    
+    models.append(('Linear SVM', 'lin_svc', SVC(kernel='linear', probability=True)))
+    models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
+    models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
+    models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
+    
+    # Initiate cross-validation
+    folds = 10    
+    cv = StratifiedKFold(n_splits=folds, random_state=10)
+    
+    # Declare KPCA kernel and model deployed
 
-    spacing = np.spacing(la.norm(A))
-    # The above is different from [1]. It appears that MATLAB's `chol` Cholesky
-    # decomposition will accept matrixes with exactly 0-eigenvalue, whereas
-    # Numpy's will not. So where [1] uses `eps(mineig)` (where `eps` is Matlab
-    # for `np.spacing`), we use the above definition. CAVEAT: our `spacing`
-    # will be much larger than [1]'s `eps(mineig)`, since `mineig` is usually on
-    # the order of 1e-16, and `eps(1e-16)` is on the order of 1e-34, whereas
-    # `spacing` will, for Gaussian random matrixes of small dimension, be on
-    # othe order of 1e-16. In practice, both ways converge, as the unit test
-    # below suggests.
-    I = np.eye(A.shape[0])
-    k = 1
-    while not isPD(A3):
-        mineig = np.min(np.real(la.eigvals(A3)))
-        A3 += I * (-mineig * k**2 + spacing)
-        k += 1
+    kpca_kernel = 0
+    mdl_name = 0
+    
+    for kernel, abbreviation, kpca in kpcas:
+        
+        if opt_kernel == kernel:
+            
+            kpca_kernels = kernel
+            # To utilise precomputed kernel(s)
+            if kernel == 'Laplacian KPCA':
+                X_kpca = kpca.fit_transform(K_lap)
+            elif kernel == 'Polynomial KPCA':
+                X_kpca = kpca.fit_transform(K_ply)
+            else:
+                X_kpca = kpca.fit_transform(X)
+            
+                    
+            plot_scatter(X_kpca,
+                         y,
+                         'First 2 principal components after %s' % kernel,
+                         gamma=gamma,
+                         x_label='Principal component 1',
+                         y_label='Principal component 2',
+                         #output = 'show',
+                         output='save',
+                         path='%s%s_%s_%sgamma%s.png' % (filepath, nowtime, abbreviation, signifier, gamma)
+                         )
+            print('\nScatter plot of first two principal components after %s for dataset %s (γ = %s) saved.' % (kernel, dataset, gamma))
+                
+            
+        
+            # Declare names of models deployed
+            mdl_names = []        
+            
+            #Record mean_aucs
+            auc_mat_row = []
+                   
+            for model_name, model_abv, model in models:
+            
+                raw_tprs = []
+                raw_fprs = []
+                tprs = []
+                aucs = []
+                mean_fpr = np.linspace(0, 1, 100)
+                
+                mdl_names.append(model_name)
+                print('\nPerforming %s followed by %s for dataset %s\n' % (kernel, model_name, dataset))
+                #print(mdl_names)
+        
+                # To count number of folds
+                i = 0
+                
+                #Initiate plot
+                fig = plt.figure(figsize=(15, 9))
+                
+                for train, test in cv.split(X_kpca, y):
+        
+                    probas_ = model.fit(X_kpca[train], y[train]).predict_proba(X_kpca[test])
+        
+                    # Compute ROC curve and area the curve
+        
+                    fpr, tpr, thresholds = roc_curve(y[test], probas_[:, 1])
+                    tprs.append(interp(mean_fpr, fpr, tpr))
+                    tprs[-1][0] = 0.0
+                    roc_auc = auc(fpr, tpr)
+                    raw_tprs.append(tpr)
+                    raw_fprs.append(fpr)
+                    aucs.append(roc_auc)
+                    plt.plot(fpr, tpr, lw=1, alpha=0.3,
+                             label='ROC fold %d (AUC = %0.2f)' % (i+1, roc_auc))
+        
+                    i += 1
+        
+                plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r',
+                         label='Luck', alpha=.8)
+        
+                mean_tpr = np.mean(tprs, axis=0)
+                mean_tpr[-1] = 1.0
+                mean_auc = auc(mean_fpr, mean_tpr)
+                auc_mat_row.append(mean_auc)
+                std_auc = np.std(aucs)
+                plt.plot(mean_fpr, mean_tpr, color='b',
+                         label=r'Mean ROC (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc),
+                         lw=2, alpha=.8)
+        
+                std_tpr = np.std(tprs, axis=0)
+                tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
+                tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
+                plt.fill_between(mean_fpr, tprs_lower, tprs_upper, color='grey', alpha=.2,
+                                 label=r'$\pm$ 1 std. dev.')
+        
+                plt.xlim([-0.05, 1.05])
+                plt.ylim([-0.05, 1.05])
+                plt.xlabel('False Positive Rate')
+                plt.ylabel('True Positive Rate')
+                plt.title('Receiver operating characteristic (Using %sPCA with %s, γ = %s)' % (kernel, model_name, gamma))
+                plt.legend()
+                #plt.show()
+                plt.savefig('%s%sroc_%s_%s_%s_gamma%s.png' % (filepath, nowtime, abbreviation, model_abv, signifier, gamma))
+                plt.close()
+                
+                trace_list, traces = js_fold_line(raw_tprs, raw_fprs)
+                trace_list, traces = js_mean_trace(mean_fpr, mean_tpr, trace_list, traces)
+                trace_list, traces = js_luck_trace(trace_list, traces)
+                trace_list, traces = js_tpr_std(tprs_upper, tprs_lower, mean_fpr, trace_list, traces)
+                
+                js_construct_roc('ROCPLOT', 'rocplot%s_%s_%s_%s' % (nowtime, dataset, abbreviation, model_abv), trace_list, traces, '%s%s_%s_%s_gamma%s_roc.js' % (jspath, nowtime, kernel, model_name, gamma))         
+    
+    return(mean_auc, kpca_kernels, mdl_names)
 
-    return A3
+# Find which element occurs most commonly in a 1D array     
+def most_common(inp_list):
+    inp_list_count_dict = dict((x,inp_list.count(x)) for x in set(inp_list))
+    consensus = max(inp_list_count_dict, key=inp_list_count_dict.get)
+    return(consensus)
 
-def isPD(B):
-    """Returns true when input is positive-definite, via Cholesky"""
-    try:
-        _ = la.cholesky(B)
-        return True
-    except la.LinAlgError:
-        return False
+### Set of functions for building plotly ROC curve
+    
 
-if __name__ == '__main__':
-    import numpy as np
-    for i in xrange(10):
-        for j in xrange(2, 100):
-            A = np.random.randn(j, j)
-            B = nearestPD(A)
-            assert(isPD(B))
-    print('unit test passed!')
+def js_fold_line(x_vals_list, y_vals_list):
+
+    #Declare trace list for calling on data
+    trace_list = []
+    traces = []
+    
+    for i in range(len(x_vals_list)):
+
+        trace = 'trace%s' % str(i+1)
+        trace_list.append(trace)
+        open_trace = 'var %s = {' % trace
+        close_trace = "\n\ttype: 'scatter'\n};\n\n"
+        trace_x = '\n\tx: ' + str(x_vals_list[i].tolist()) + ','
+        trace_y = '\n\ty: ' + str(y_vals_list[i].tolist()) + ','
+        leg_name = "\n\tname: 'ROC fold %s'," % str(i+4)
+        line = "\n\tline:{\n\t\twidth: 2,\n\t},"
+        full_trace = open_trace + trace_x + trace_y +  leg_name + line + close_trace
+        traces.append(full_trace)
+
+    return(trace_list, traces)
+
+def js_mean_trace(mean_x, mean_y, trace_list, traces):
+
+    mean_trace = "trace" + str(int(trace_list[-1][5:]) + 1)
+    trace_list.append(mean_trace)
+    mean_trace_x = '\n\tx: ' + str(mean_x.tolist()) + ','
+    mean_trace_y = '\n\ty: ' + str(mean_y.tolist()) + ','
+    mean_trace_close ="\n\tname: 'Mean',\n\tline: {\n\t\tcolor: 'rgb(0, 0, 225)',\n\t\twidth: 8,\n\t},\n\tmode: 'lines',\n\ttype: 'scatter'\n};"
+    mean_trace_full = "var %s = {%s%s%s" % (mean_trace, mean_trace_x, mean_trace_y, mean_trace_close)
+    traces.append(mean_trace_full)
+
+    return(trace_list, traces)
+
+def js_construct_roc(chartname, divname, trace_list, traces, path):
+    
+    #To remove inverted commas around each trace
+    class MyStr(str):
+        def __repr__(self):
+            return super(MyStr, self).__repr__().strip("'")
+
+    plot_write("%s = document.getElementById('%s');\n\n" % (chartname, divname), path)
+    for trace in traces:
+        plot_write(trace, path)
+    
+    tl_stripped = []
+    
+    for label in trace_list:
+        tl_stripped.append(MyStr(label))        
+    
+    plot_write('\nvar data = %s;\n' % str(tl_stripped), path)
+    plot_write('\nPlotly.newPlot(%s, data);' % chartname, path)
+
+def js_luck_trace(trace_list, traces):
+
+    trace_list = ['trace3'] + trace_list
+    traces = ["var trace3 = {\n\tx: [0, 1],\n\ty: [0, 1],\n\tname: 'Luck',\n\tline: {\n\t\tdash: 'dot',\n\t\tcolor: 'rgb(255, 0, 0)',\n\t},\n\tmode: 'lines',\n\ttype: 'scatter'\n};\n\n"] + traces
+    return(trace_list, traces)
+
+def js_tpr_std(tpr_std_upper, tpr_std_lower, fpr_std, trace_list, traces):
+
+    trace_list = ['trace2'] + trace_list
+    traces = ["var trace2 = {\n\tx: %s,\n\ty: %s,\n\tname: 'Mean ±1 standard deviation',\n\tline:{\n\t\twidth: 0,\n\t},\n\tfill:'tonexty',\n\tmode: 'lines',\n\ttype: 'scatter'\n};\n\n" % (str(tpr_std_upper.tolist()), str(fpr_std.tolist()))] + traces
+
+    trace_list = ['trace1'] + trace_list
+    traces = ["var trace1 = {\n\tx: %s,\n\ty: %s,\n\tname: '',\n\tline:{\n\t\twidth: 0,\n\t},\n\tfill: 'none',\n\tmode: 'lines',\n\ttype: 'scatter'\n};\n\n" % (str(tpr_std_lower.tolist()), str(fpr_std.tolist()))] + traces
+    return(trace_list, traces)

@@ -30,7 +30,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import SVC
-from sklearn.metrics.pairwise import laplacian_kernel, chi2_kernel
+from sklearn.metrics.pairwise import laplacian_kernel, chi2_kernel, polynomial_kernel
 
 from scipy import interp
 
@@ -107,7 +107,8 @@ for dataset in dataset_list:
     #compute kernels not preloaded into kpca
     #laplacian
     K_lap = laplacian_kernel(X_scaled, gamma=gamma) 
-    K_chi = chi2_kernel(X, gamma=gamma) 
+    K_chi = chi2_kernel(X, gamma=gamma)
+    K_ply = polynomial_kernel(X=X, degree=2, gamma=gamma)
     kpcas = []
     
     #Use standard PCA for comparison
@@ -115,19 +116,21 @@ for dataset in dataset_list:
     #kpcas.append(('standard ', 'std_', PCA(n_components=2)))
     
     #Linear kernal has no need for gamma
-    kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
-    kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
-    kpcas.append(('Laplacian KPCA', 'prec_lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
-    kpcas.append(('Chi Squared KPCA', 'prec_chi_kpca',KernelPCA(n_components=2, kernel='precomputed')))
+    #kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
+    #kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
+    #kpcas.append(('Laplacian KPCA', 'prec_lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
+    #kpcas.append(('Chi Squared KPCA', 'prec_chi_kpca',KernelPCA(n_components=2, kernel='precomputed')))
     kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
-    kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
-    kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    kpcas.append(('2nd Polynomial KPCA', '2_ply_kpca', KernelPCA(n_components=2, kernel='precomputed')))
+    #kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    #kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
     
     #Initiate models with default parameters
     
     models = []
     
-    models.append(('SVC', SVC(kernel='linear', probability=True)))
+    models.append(('SVM', 'lin_svc', SVC(kernel='linear', probability=True)))
+    models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
     
     
     cv = StratifiedKFold(n_splits=10, random_state=10)
@@ -150,6 +153,8 @@ for dataset in dataset_list:
             X_kpca = kpca.fit_transform(K_lap)
         elif kernel == 'Chi Squared KPCA':
             X_kpca = kpca.fit_transform(K_chi)
+        elif kernel == '2nd Polynomial KPCA':
+            X_kpca = kpca.fit_transform(K_ply)
         else:
             X_kpca = kpca.fit_transform(X_scaled)
     
@@ -173,7 +178,7 @@ for dataset in dataset_list:
         mdl_names = []
         plt.figure(figsize=(15, 9))
     
-        for name, model in models:
+        for name, mdl_abv, model in models:
     
             mdl_names.append(name)
             print('\nPerforming ' + name + ' with ' + kernel)
@@ -223,7 +228,7 @@ for dataset in dataset_list:
             plt.legend(loc="lower right")
             #plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
             #plt.show()
-            plt.savefig('%s%s_roc_%s_gamma%s.png' % (filepath, nowtime, abbreviation, gamma))
+            plt.savefig('%s%s_roc_%s_%s_gamma%s.png' % (filepath, nowtime, abbreviation, mdl_abv, gamma))
             plt.close()
 
 

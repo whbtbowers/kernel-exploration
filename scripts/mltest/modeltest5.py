@@ -153,7 +153,7 @@ for dataset, X, y in datalist:
             
     # Show optimal gamma
     #opt_t2_gammas.append(opt_t2_gamma)
-'''
+
 # End of dataset run        
 print('\n###################################################################\n')
 
@@ -171,7 +171,7 @@ t2_gamma_consensus = max(t2_gcount_dict, key=t2_gcount_dict.get)
 
 # Create tier 2 gamma list
 gamma_i_t2 = t1_gamma_list.index(t1_gamma_consensus)
-'''
+
 
 
 #Calculate and display time taken or script to run

@@ -47,32 +47,31 @@ nowtime = now.strftime("%H-%M")
 scriptname = 'roc_kpca2_2_mesa'
 
 #List of toy datasets to test
-dataset_list = ['022', '023', '024']
-#dataset_list = ['024']
-dataset_list = ['MESA']
+#dataset_list = ['022', '023', '024']
+dataset_list = ['diabetes']
+#dataset_list = ['MESA']
 
 for dataset in dataset_list: 
 
     #Create directory if directory does not exist
     filepath = '../../figs/out/%s/%s/mesa/' % (scriptname, nowdate)
+    plotpath = '%splotting/' % filepath
     
     if not os.path.exists(filepath):
         os.makedirs(filepath)
+        os.makedirs(plotpath)
     
     #Import toy data and target
-    inp_df = pd.read_csv('../../data/mesa/MESA_CPMG_MBINV2_ManuallyBinnedData_BatchCorrected_LogTransformed_1stcolOC.csv', header=None, index_col=0, sep=',')
+    inp_df = pd.read_csv('../../data/mesa/MESA_CPMG_MBINV2_ManuallyBinnedData_BatchCorrected_LogTransformed_1stcol_%s.csv' % dataset, header=None, index_col=0, sep=',')
     #y = np.load('../../data/simulated/mvnsim/target' + dataset + '.npy')
     
     #print(inp_df)
     
     X_imp = p2f.filt_imp(inp_df, 0.1)
     
-    X_imp_df = pd.DataFrame.from_records(X_imp)
+    #print(X_imp_df)
     
-    print(X_imp_df)
-    
-    X, y = p2f.tsplit(X_imp_df)
-    y = y.astype(int)
+    X, y = p2f.tsplit(X_imp)
     n_cols, n_rows = X.shape
     
     
@@ -132,13 +131,13 @@ for dataset in dataset_list:
     #kpcas.append(('standard ', 'std_', PCA(n_components=2)))
     
     #Linear kernal has no need for gamma
-    kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
+    #kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
     kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
-    kpcas.append(('Laplacian KPCA', 'prec_lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
+    #kpcas.append(('Laplacian KPCA', 'prec_lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
     #kpcas.append(('Chi Squared KPCA', 'prec_chi_kpca',KernelPCA(n_components=2, kernel='precomputed')))
-    kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
-    kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
-    kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    #kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
+    #kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    #kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
     
     #Initiate models with default parameters
     
@@ -148,12 +147,7 @@ for dataset in dataset_list:
     
     
     cv = StratifiedKFold(n_splits=10, random_state=10)
-    
-    
-    tprs = []
-    aucs = []
-    mean_fpr = np.linspace(0, 1, 100)
-    
+      
     
     
     # Declare KPCA kernels deployed
@@ -178,7 +172,10 @@ for dataset in dataset_list:
                          y_label='Principal component 2',
                          #output = 'show',
                          output='save',
-                         path='%s%s_%s_gamma%s.png' % (filepath, nowtime, abbreviation, gamma)
+                         path='%s%s_%s_gamma%s.png' % (filepath, nowtime, abbreviation, gamma),
+                         writepath = '%s%s_%s_%s_plottingdata.txt' %(plotpath, nowtime, scriptname, dataset),
+                         dataset=dataset,
+                         kernel=kernel,
                          )
         
         print('\nScatter plot of first two principal components after %s for dataset %s saved.' % (kernel, dataset))
@@ -195,7 +192,13 @@ for dataset in dataset_list:
             mdl_names.append(name)
             print('\nPerforming ' + name + ' with ' + kernel)
             #print(mdl_names)
-    
+            
+            tprs = []
+            raw_tprs = []
+            raw_fprs = []
+            aucs = []
+            mean_fpr = np.linspace(0, 1, 100)
+            
             # To count number of folds
             i = 0
     
@@ -209,12 +212,15 @@ for dataset in dataset_list:
                 tprs.append(interp(mean_fpr, fpr, tpr))
                 tprs[-1][0] = 0.0
                 roc_auc = auc(fpr, tpr)
+                raw_tprs.append(tpr)
+                raw_fprs.append(fpr)
                 aucs.append(roc_auc)
                 plt.plot(fpr, tpr, lw=1, alpha=0.3,
                          label='ROC fold %d (AUC = %0.2f)' % (i+1, roc_auc))
     
                 i += 1
-    
+                
+           
             plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r',
                      label='Luck', alpha=.8)
     
@@ -225,13 +231,14 @@ for dataset in dataset_list:
             plt.plot(mean_fpr, mean_tpr, color='b',
                      label=r'Mean ROC (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc),
                      lw=2, alpha=.8)
-    
+           
+            
             std_tpr = np.std(tprs, axis=0)
             tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
             tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
             plt.fill_between(mean_fpr, tprs_lower, tprs_upper, color='grey', alpha=.2,
                              label=r'$\pm$ 1 std. dev.')
-    
+            
             plt.xlim([-0.05, 1.05])
             plt.ylim([-0.05, 1.05])
             plt.xlabel('False Positive Rate')
@@ -243,7 +250,14 @@ for dataset in dataset_list:
             plt.savefig('%s%s_roc_%s_gamma%s.png' % (filepath, nowtime, abbreviation, gamma))
             plt.close()
 
-    
+            #Create javacript plot of data
+            path = '../../int_charts/mesatestplot.js'
+            trace_list, traces = p2f.js_fold_line(raw_tprs, raw_fprs)
+            trace_list, traces = p2f.js_mean_trace(mean_fpr, mean_tpr, trace_list, traces)
+            trace_list, traces = p2f.js_luck_trace(trace_list, traces)
+            trace_list, traces = p2f.js_tpr_std(tprs_upper, tprs_lower, mean_fpr, trace_list, traces)
+            
+            p2f.js_construct_roc('MESATEST', 'mesatestplot', trace_list, traces, path)
             
 #Calculate and display time taken or script to run
 EndTime = (time.time() - StartTime)
