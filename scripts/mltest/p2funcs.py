@@ -449,8 +449,8 @@ def gs_pca_plot(X, y, dataset, filepath, cat1, cat0):
      
     init_gamma = 1/X_cols
     
-    gamma_list = [init_gamma/10000, init_gamma/1000, init_gamma/100, init_gamma/10, init_gamma, init_gamma*10, init_gamma*100, init_gamma*1000, init_gamma*10000, init_gamma*100000]
-    
+    #gamma_list = [init_gamma/10000, init_gamma/1000, init_gamma/100, init_gamma/10, init_gamma, init_gamma*10, init_gamma*100, init_gamma*1000, init_gamma*10000, init_gamma*100000]
+    gamma_list = [init_gamma/10, init_gamma, init_gamma*10, init_gamma*100, init_gamma*1000, init_gamma*10000, init_gamma*100000]
     for gamma in gamma_list:
     
         kpcas = []
@@ -612,7 +612,7 @@ def m_test5_2(X, y, gamma, dataset, filepath, signifier):
         auc_mat.append(auc_mat_row)     
 
     auc_mat = np.array(auc_mat)
-    
+        
     return(auc_mat, kpca_kernels, mdl_names)
     
 def m_test5_2_rocplot(X, y, gamma, dataset, filepath, signifier, jspath):
@@ -632,10 +632,9 @@ def m_test5_2_rocplot(X, y, gamma, dataset, filepath, signifier, jspath):
     #kpcas.append(('standard PCA', 'std_', PCA(n_components=2)))
     
     #Linear kernal has no need for gamma
-    #kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
+    kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
     kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
-    #kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))    
-    #kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
+    #kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
     #kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
     #kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
     
@@ -644,8 +643,7 @@ def m_test5_2_rocplot(X, y, gamma, dataset, filepath, signifier, jspath):
     models = []
     
     models.append(('Linear SVM', 'lin_svc', SVC(kernel='linear', probability=True)))
-    #models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
-    #models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
+    models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
     #models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
     
     # Initiate cross-validation
@@ -756,6 +754,11 @@ def m_test5_2_rocplot(X, y, gamma, dataset, filepath, signifier, jspath):
             trace_list, traces = js_tpr_std(tprs_upper, tprs_lower, mean_fpr, trace_list, traces)
             
             js_construct_roc('ROCPLOT', 'rocplot%s_%s_%s_%s' % (nowtime, dataset, abbreviation, model_abv), trace_list, traces, '%s%s_%s_%s_gamma%s_roc.js' % (jspath, nowtime, kernel, model_name, gamma))
+            
+        auc_mat.append(auc_mat_row)     
+
+    auc_mat = np.array(auc_mat)
+    
     
     return(auc_mat, kpca_kernels, mdl_names)
     
@@ -772,21 +775,21 @@ def m_run5_3(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, signifie
     
     kpcas = []
     
-    kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
+    #kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
     kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
-    kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))    
-    kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='precomputed')))
-    kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
-    kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    #kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))    
+    #kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='precomputed')))
+    #kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    #kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
     
     #Initiate models with default parameters
 
     models = []
     
     models.append(('Linear SVM', 'lin_svc', SVC(kernel='linear', probability=True)))
-    models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
-    models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
-    models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
+    #models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
+    #models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
+    #models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
     
     # Initiate cross-validation
     folds = 10    
@@ -875,9 +878,11 @@ def m_run5_3(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, signifie
                     # Display mean roc auc
                     #print("Mean area under curve for %s followed by %s (γ = %s): %0.2f" % (kernel, model_name, gamma, mean_auc))
             
+            auc_mat.append(auc_mat_row)     
 
+    auc_mat = np.array(auc_mat)
     
-    return(mean_auc, kpca_kernels, mdl_names)
+    return(auc_mat, kpca_kernels, mdl_names)
     
 def m_run5_3_rocplot(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, signifier, jspath):
     
@@ -892,21 +897,21 @@ def m_run5_3_rocplot(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, 
     
     kpcas = []
     
-    kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
+    #kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
     kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
-    kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))    
-    kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='precomputed')))
-    kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
-    kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    #kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))    
+    #kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='precomputed')))
+    #kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    #kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
     
     #Initiate models with default parameters
 
     models = []
     
     models.append(('Linear SVM', 'lin_svc', SVC(kernel='linear', probability=True)))
-    models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
-    models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
-    models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
+    #models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
+    #models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
+    #models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
     
     # Initiate cross-validation
     folds = 10    
@@ -1022,7 +1027,11 @@ def m_run5_3_rocplot(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, 
                 
                 js_construct_roc('ROCPLOT', 'rocplot%s_%s_%s_%s' % (nowtime, dataset, abbreviation, model_abv), trace_list, traces, '%s%s_%s_%s_gamma%s_roc.js' % (jspath, nowtime, kernel, model_name, gamma))         
     
-    return(mean_auc, kpca_kernels, mdl_names)
+        auc_mat.append(auc_mat_row)     
+
+    auc_mat = np.array(auc_mat)
+    
+    return(auc_mat, kpca_kernels, mdl_names)
 
 # Find which element occurs most commonly in a 1D array     
 def most_common(inp_list):
@@ -1099,3 +1108,77 @@ def js_tpr_std(tpr_std_upper, tpr_std_lower, fpr_std, trace_list, traces):
     trace_list = ['trace1'] + trace_list
     traces = ["var trace1 = {\n\tx: %s,\n\ty: %s,\n\tname: '',\n\tline:{\n\t\twidth: 0,\n\t},\n\tfill: 'none',\n\tmode: 'lines',\n\ttype: 'scatter'\n};\n\n" % (str(tpr_std_lower.tolist()), str(fpr_std.tolist()))] + traces
     return(trace_list, traces)
+
+#Create matplotlib heatmap    
+def heatmap(data, row_labels, col_labels, ax=None,
+            cbar_kw={}, cbarlabel="", **kwargs):
+    """
+    Create a heatmap from a numpy array and two lists of labels.
+
+    Arguments:
+        data       : A 2D numpy array of shape (N,M)
+        row_labels : A list or array of length N with the labels
+                     for the rows
+        col_labels : A list or array of length M with the labels
+                     for the columns
+    Optional arguments:
+        ax         : A matplotlib.axes.Axes instance to which the heatmap
+                     is plotted. If not provided, use current axes or
+                     create a new one.
+        cbar_kw    : A dictionary with arguments to
+                     :meth:`matplotlib.Figure.colorbar`.
+        cbarlabel  : The label for the colorbar
+    All other arguments are directly passed on to the imshow call.
+    """
+
+    if not ax:
+        ax = plt.gca()
+
+    # Plot the heatmap
+    im = ax.imshow(data, **kwargs)
+
+    # Create colorbar
+    cbar = ax.figure.colorbar(im, ax=ax, **cbar_kw)
+    cbar.ax.set_ylabel(cbarlabel, rotation=-90, va="bottom")
+
+    # We want to show all ticks...
+    ax.set_xticks(np.arange(data.shape[1]))
+    ax.set_yticks(np.arange(data.shape[0]))
+    # ... and label them with the respective list entries.
+    ax.set_xticklabels(col_labels)
+    ax.set_yticklabels(row_labels)
+
+    # Let the horizontal axes labeling appear on top.
+    ax.tick_params(top=True, bottom=False,
+                   labeltop=True, labelbottom=False)
+
+    # Rotate the tick labels and set their alignment.
+    plt.setp(ax.get_xticklabels(), rotation=-30, ha="right",
+             rotation_mode="anchor")
+
+    # Turn spines off and create white grid.
+    for edge, spine in ax.spines.items():
+        spine.set_visible(False)
+
+    ax.set_xticks(np.arange(data.shape[1]+1)-.5, minor=True)
+    ax.set_yticks(np.arange(data.shape[0]+1)-.5, minor=True)
+    ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
+    ax.tick_params(which="minor", bottom=False, left=False)
+
+    return(im, cbar)
+
+# Plot and show matplotlib heatmap    
+def plot_mpl_heatmap(data, row_labels, col_labels, ax=None,
+            cbar_kw={}, cbarlabel="", output=None, path=None, **kwargs, ):
+    
+    fig, ax = plt.subplots()    
+    
+    im, cbar = heatmap(data, row_labels, col_labels, ax=ax,
+            cbar_kw={}, cbarlabel="", **kwargs)
+    
+    fig.tight_layout()
+    
+    if output == 'show':
+        plt.show()
+    elif output == 'save':
+        plt.savefig(path)

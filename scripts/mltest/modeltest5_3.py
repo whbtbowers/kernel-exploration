@@ -118,7 +118,7 @@ print('\n###################################################################')
 
 # Print aggregate gamma values
 for i in range(len(opt_t1_gammas)):
-    print('\nOptimal Tier 1 gamma for dataset %s found to be %s' %(dataset_list[i], opt_t1_gammas[i]))       
+    print('\nOptimal Tier 1 gamma for dataset %s found to be %s' %(toy_dataset_list[i], opt_t1_gammas[i]))       
 
 # Count number of each gamma    
 t1_gcount_dict = dict((x,opt_t1_gammas.count(x)) for x in set(opt_t1_gammas))
@@ -129,6 +129,7 @@ t1_gamma_consensus = max(t1_gcount_dict, key=t1_gcount_dict.get)
 #Just in case last value selected:
 if t1_gamma_consensus == t1_gamma_list[-1]:
     t1_gamma_consensus = t1_gamma_list[-2]
+    
 
 # Create tier 2 gamma list
 gamma_i_t1 = t1_gamma_list.index(t1_gamma_consensus)
