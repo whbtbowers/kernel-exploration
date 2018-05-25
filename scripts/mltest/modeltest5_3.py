@@ -135,7 +135,6 @@ if t1_gamma_consensus == t1_gamma_list[-1]:
 gamma_i_t1 = t1_gamma_list.index(t1_gamma_consensus)
 t2_gamma_list = list(p2f.frange(t1_gamma_list[gamma_i_t1-1], t1_gamma_list[gamma_i_t1], t1_gamma_list[gamma_i_t1-1])) + list(p2f.frange(t1_gamma_list[gamma_i_t1], t1_gamma_list[gamma_i_t1+1], t1_gamma_list[gamma_i_t1]))   
 
-
 amat_dict_list = []
 t2_kpcas = 0
 t2_models = 0

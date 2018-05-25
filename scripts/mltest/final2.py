@@ -34,19 +34,15 @@ nowdate = now.strftime("%Y-%m-%d")
 nowtime = now.strftime("%H-%M")
 
 # Name of script to trace where images came from
-scriptname = 'finalstrip1'
+scriptname = 'final2'
 
 #List of datasets to test
 inp_dataset_list = [('Diabetes', 'diabetes'), ('Sex','sex'), ('Carotid Artery Calcification', 'cac_binomial'), ('Extreme Carotid Artery Calcification','cac_extremes'), ('Family History of Diabetes','family_hx_diabetes'), ('Parental history of CVD below age 65', 'parent_cvd_65_hx'), ('Family history of CVD', 'family_hx_cvd'), ('Blood Pressure Treatment', 'bp_treatment'), ('Diabetes Treatment', 'diabetes_treatment'), ('Lipids Treatment', 'lipids_treatment'), ('Plaque', 'plaque')]
 #inp_dataset_list = [('Diabetes', 'diabetes'), ('Sex','sex'), ('Carotid Artery Calcification', 'cac_binomial')]
 #inp_dataset_list = [('Diabetes', 'diabetes')]
 
-#Split data list
-spl_data = []
-
-# Collect optimal gamma from each dataset
+# Collect optimal tier1 gammas
 opt_t1_gammas = []
-#opt_t2_gammas = []
 
 #Using first input dataset to generate toy datasets
 inp_df = pd.read_csv('../../data/mesa/MESA_CPMG_MBINV2_ManuallyBinnedData_BatchCorrected_LogTransformed_1stcol_%s.csv' % inp_dataset_list[0][1], sep=',', header=None, index_col=0)
@@ -56,14 +52,9 @@ X_imp = p2f.filt_imp(inp_df, 0.1)
 X, y = p2f.tsplit(X_imp)
 toy_dataset_list, toy_y = p2f.toybox_gen(X)
 
-# Record imptimals
-amat_dict_list = []
-t2_kpcas = 0
-t2_models = 0
-
 for toy_label, toy_X in toy_dataset_list:
     
-    print('\n##### Now running dataset %s #####' %toy_label)
+    print('\n##### Now running dataset %s through tier 1 #####' %toy_label)
           
     #Create directory if directory does not exist
     filepath = '../../figs/out/%s/%s/%s/' % (scriptname, nowdate, toy_label)
@@ -81,9 +72,9 @@ for toy_label, toy_X in toy_dataset_list:
     def_gamma = 1/toy_X_cols
     
     #Tier1 gamma values
-    #t1_gamma_list = [def_gamma/10000, def_gamma/1000, def_gamma/100, def_gamma/10, def_gamma, def_gamma*10, def_gamma*100, def_gamma*1000, def_gamma*10000, def_gamma*10000]
+    t1_gamma_list = [def_gamma/10000, def_gamma/1000, def_gamma/100, def_gamma/10, def_gamma, def_gamma*10, def_gamma*100, def_gamma*1000, def_gamma*10000, def_gamma*10000]
     #t1_gamma_list = [def_gamma/100, def_gamma/10, def_gamma]
-    t1_gamma_list = [def_gamma]
+    #t1_gamma_list = [def_gamma]
     
     
     # Dict of gammas w/ t1 Matrices
@@ -98,23 +89,19 @@ for toy_label, toy_X in toy_dataset_list:
     # Create initial variables to update
     max_t1_mma = 0
     opt_t1_gamma = 0
-    
-    print('\n### TIER 1 GRID SEARCH ###')
 
     
     for gamma in t1_gamma_list:
         
         amat_dict.update({gamma:[]})
         
-        t1_auc_mat, t1_kpcas, t1_models  = p2f.m_test5_2_rocplot(toy_X_scaled, toy_y, gamma, toy_label, filepath, plotpath, 'tier1')
+        t1_auc_mat, t1_kpcas, t1_models  = p2f.m_test5_2(toy_X_scaled, toy_y, gamma, toy_label, filepath, plotpath, 'tier1')
         
         amat_dict[gamma].append(t1_auc_mat)
         
         p2f.plot_mpl_heatmap(t1_auc_mat, t1_kpcas, t1_models, cmap="Oranges", cbarlabel="Mean area under ROC curve after 10-fold cross validation", output='save', path='%s%s_tier1_gs' % (filepath, nowtime))
         
         t1_mmas.append(np.mean(t1_auc_mat))
-        
-    amat_dict_list.append(amat_dict)
          
     # Select optimal t1 gamma 
     for i in range(len(t1_mmas)):
@@ -136,10 +123,71 @@ for i in range(len(opt_t1_gammas)):
 
 # Find most frequent gamma value
 t1_gamma_consensus = p2f.most_common(opt_t1_gammas)
-#print(t1_gamma_consensus)
+
+'''
+#Just in case last value selected:
+if t1_gamma_consensus == t1_gamma_list[-1]:
+    t1_gamma_consensus = t1_gamma_list[-2]
+'''   
 # Create tier 2 gamma list
 gamma_i_t1 = t1_gamma_list.index(t1_gamma_consensus)
-opt_gamma = t1_gamma_list[gamma_i_t1]
+t2_gamma_list = list(p2f.frange(t1_gamma_list[gamma_i_t1-1], t1_gamma_list[gamma_i_t1], t1_gamma_list[gamma_i_t1-1])) + list(p2f.frange(t1_gamma_list[gamma_i_t1], t1_gamma_list[gamma_i_t1+1], t1_gamma_list[gamma_i_t1]))
+#t2_gamma_list = [t1_gamma_list[gamma_i_t1]]
+    
+
+#Dictionary of AUC matrices by gamma    
+amat_dict_list = []
+
+# Collect optimal tier2 gammas
+opt_t2_gammas = []
+    
+for toy_label, toy_X in toy_dataset_list:
+    
+    print('\n##### Now running dataset %s through Tier 2 #####' %toy_label)   
+    
+    # Dict of gammas w/ t1 Matrices
+    amat_dict = dict()
+    
+    #Scale initial data to centre    
+    toy_X_scaled = scale(toy_X)
+    
+    #Declare list for t2 mean mean area under ROC curve (mma) values        
+    t2_mmas = []
+    
+    # Create initial variables to update
+    max_t2_mma = 0
+    opt_t2_gamma = 0
+
+    
+    for gamma in t2_gamma_list:
+        
+        amat_dict.update({gamma:[]})
+        
+        t2_auc_mat, t2_kpcas, t2_models  = p2f.m_test5_2_rocplot(toy_X_scaled, toy_y, gamma, toy_label, filepath, plotpath, 'tier1')
+        
+        amat_dict[gamma].append(t2_auc_mat)
+        
+        p2f.plot_mpl_heatmap(t2_auc_mat, t2_kpcas, t2_models, cmap="autumn", cbarlabel="Mean area under ROC curve after 10-fold cross validation", output='save', path='%s%s_tier1_gs' % (filepath, nowtime))
+        
+        t2_mmas.append(np.mean(t2_auc_mat))
+        
+    amat_dict_list.append(amat_dict)
+         
+    # Select optimal t1 gamma 
+    for i in range(len(t2_mmas)):
+        if t2_mmas[i] > max_t2_mma:
+            max_t2_mma = t2_mmas[i]
+            opt_t2_gamma = t2_gamma_list[i]    
+
+    opt_t2_gammas.append(opt_t2_gamma)
+    print("\n%.2f seconds elapsed so far.\n" % (time.time() - StartTime))
+    
+# Find most frequent gamma value
+print('opt_t2_gammas:')
+print(opt_t2_gammas)
+t2_gamma_consensus = p2f.most_common(opt_t2_gammas)    
+gamma_i_t2 = t2_gamma_list.index(t2_gamma_consensus)
+opt_gamma = t2_gamma_list[gamma_i_t2]
 
 #Declare arrays to find most common methods
 opt_kpcas_byg = []

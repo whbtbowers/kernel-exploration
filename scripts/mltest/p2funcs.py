@@ -1,4 +1,5 @@
 import os
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
@@ -33,6 +34,7 @@ from sklearn.metrics.pairwise import laplacian_kernel, chi2_kernel, polynomial_k
 
 
 from scipy import interp
+from pylab import get_cmap
 
 # Time to differentiate images
 now = datetime.datetime.now()
@@ -56,7 +58,11 @@ def plot_scatter(x, y, title, gamma=None, x_label='x coordinate', y_label='y coo
                        alpha=0.5
                        )
 
-    trace1 = js_scatter_trace(X, Y, n, cat0)
+    trace1 = js_scatter_trace(x[y==0, 0],
+                              x[y==0, 1],
+                              1, 
+                              cat0
+                              )
 
     catb = plt.scatter(x[y==1, 0],
                        x[y==1, 1],
@@ -65,7 +71,11 @@ def plot_scatter(x, y, title, gamma=None, x_label='x coordinate', y_label='y coo
                        alpha=0.3
                        )
 
-    trace2 = js_scatter_trace(X, Y, n, cat1)
+    trace2 = js_scatter_trace(x[y==1, 0],
+                              x[y==1, 1],
+                              2,
+                              cat1
+                              )
 
     plt.title(title)
     plt.xlabel(x_label)
@@ -341,17 +351,14 @@ def toybox_gen(inp_df):
     cols, rows = inp_df.shape
     df_cov = np.cov(inp_df)
     print('\nCovariance calculated\n')
-
-    #cov1 = np.array([df_cov/40, df_cov/20, df_cov/10, df_cov/5, df_cov/2, df_cov/1.5, df_cov/1.5])
-    cov1 = np.array([df_cov/40])
+    cov1 = np.array([df_cov/40, df_cov/20, df_cov/10, df_cov/5, df_cov/2, df_cov/1.5, df_cov/1.5, df_cov, df_cov, df_cov, df_cov, df_cov, df_cov])
+    #cov1 = np.array([df_cov/40])
     cov2 = np.array(df_cov)
 
-
     init_mean = inp_df.mean(axis=1).tolist()
-    print('Means calculated\n')
-
-    #mean1 = np.array([init_mean, init_mean, init_mean, init_mean, init_mean, init_mean, np.add(init_mean, 0.5)])
-    mean1 = np.array([init_mean])
+    print('Means calculated\n')    
+    mean1 = np.array([init_mean, init_mean, init_mean, init_mean, init_mean, init_mean, np.add(init_mean, 0.5), np.add(init_mean, 0.5), np.add(init_mean, 1.0), np.add(init_mean, 1.5), np.add(init_mean, 2.0), np.add(init_mean, 2.5), np.add(init_mean, 3.0)])
+    #mean1 = np.array([init_mean])
     mean2 =  init_mean
 
     dataset_list = []
@@ -366,7 +373,7 @@ def toybox_gen(inp_df):
     #Set up target array
     target = np.zeros(d2rows*2, dtype=int)
     target[0:int(round(d2rows))] = '1'
-    print('Toy outcomes generated\n')
+    print('Simulated outcomes generated\n')
 
     for i in range(len(cov1)):
 
@@ -377,7 +384,7 @@ def toybox_gen(inp_df):
         mvn_sim = np.vstack((d1_x, d2_x))
         mvn_sim_df = pd.DataFrame.from_records(mvn_sim)
         dataset_list.append(('ds00%d' % counter, mvn_sim_df))
-        print('Toy dataset ds%d generated' % counter)
+        print('Simulated dataset ds%d generated' % counter)
         counter += 1
 
 
@@ -494,7 +501,7 @@ def gs_pca_plot(X, y, dataset, filepath, cat1, cat0):
 
             print('\nScatter plot of first two principal components after %s for dataset %s with gamma = %s saved.' % (kernel, dataset, gamma))
 
-def m_test5_2(X, y, gamma, dataset, filepath, signifier):
+def m_test5_2(X, y, gamma, dataset, filepath, jspath, signifier):
 
     #Record all mean roc_aucs for each gamma value
     auc_mat = []
@@ -503,8 +510,6 @@ def m_test5_2(X, y, gamma, dataset, filepath, signifier):
     #compute kernels not preloaded into kpca
     #laplacian
     K_lap = laplacian_kernel(X, gamma=gamma)
-    # Quadratic
-    K_ply = polynomial_kernel(X=X, degree=2, gamma=gamma)
 
     kpcas = []
 
@@ -513,21 +518,19 @@ def m_test5_2(X, y, gamma, dataset, filepath, signifier):
     #kpcas.append(('standard PCA', 'std_', PCA(n_components=2)))
 
     #Linear kernal has no need for gamma
-    #kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
+    kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
     kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
-    #kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
-    #kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='precomputed')))
-    #kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
-    #kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
+    kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
 
     #Initiate models with default parameters
 
     models = []
 
     models.append(('Linear SVM', 'lin_svc', SVC(kernel='linear', probability=True)))
-    #models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
-    #models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
-    #models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
+    models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
+    models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
 
     # Initiate cross-validation
     folds = 10
@@ -556,7 +559,8 @@ def m_test5_2(X, y, gamma, dataset, filepath, signifier):
                      y_label='Principal component 2',
                      #output = 'show',
                      output='save',
-                     path='%s%s_%s_%sgamma%s.png' % (filepath, nowtime, abbreviation, signifier, gamma)
+                     path='%s%s_%s_%sgamma%s.png' % (filepath, nowtime, abbreviation, signifier, gamma),
+                     jspath='%s%s_%s_%sgamma%s.js' % (jspath, nowtime, abbreviation, signifier, gamma),
                      )
         print('\nScatter plot of first two principal components after %s for dataset %s (γ = %s) saved.' % (kernel, dataset, gamma))
 
@@ -616,7 +620,7 @@ def m_test5_2(X, y, gamma, dataset, filepath, signifier):
 
     return(auc_mat, kpca_kernels, mdl_names)
 
-def m_test5_2_rocplot(X, y, gamma, dataset, filepath, signifier, jspath):
+def m_test5_2_rocplot(X, y, gamma, dataset, filepath, jspath, signifier):
 
     #Record all mean roc_aucs for each gamma value
     auc_mat = []
@@ -635,9 +639,9 @@ def m_test5_2_rocplot(X, y, gamma, dataset, filepath, signifier, jspath):
     #Linear kernal has no need for gamma
     kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
     kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
-    #kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
-    #kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
-    #kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
+    kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
 
     #Initiate models with default parameters
 
@@ -645,7 +649,7 @@ def m_test5_2_rocplot(X, y, gamma, dataset, filepath, signifier, jspath):
 
     models.append(('Linear SVM', 'lin_svc', SVC(kernel='linear', probability=True)))
     models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
-    #models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
+    models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
 
     # Initiate cross-validation
     folds = 10
@@ -672,7 +676,8 @@ def m_test5_2_rocplot(X, y, gamma, dataset, filepath, signifier, jspath):
                      y_label='Principal component 2',
                      #output = 'show',
                      output='save',
-                     path='%s%s_%s_%sgamma%s.png' % (filepath, nowtime, abbreviation, signifier, gamma)
+                     path='%s%s_%s_%sgamma%s.png' % (filepath, nowtime, abbreviation, signifier, gamma),
+                     jspath='%s%s_%s_%sgamma%s.js' % (jspath, nowtime, abbreviation, signifier, gamma),
                      )
         print('\nScatter plot of first two principal components after %s for dataset %s (γ = %s) saved.' % (kernel, dataset, gamma))
 
@@ -743,13 +748,13 @@ def m_test5_2_rocplot(X, y, gamma, dataset, filepath, signifier, jspath):
             plt.ylim([-0.05, 1.05])
             plt.xlabel('False Positive Rate')
             plt.ylabel('True Positive Rate')
-            plt.title('Receiver operating characteristic (Using %sPCA with %s, γ = %s)' % (kernel, model_name, gamma))
+            plt.title('Receiver operating characteristic (Using %s with %s, γ = %s)' % (kernel, model_name, gamma))
             plt.legend()
             #plt.show()
             plt.savefig('%s%sroc_%s_%s_%s_gamma%s.png' % (filepath, nowtime, abbreviation, model_abv, signifier, gamma))
             plt.close()
 
-            trace_list, traces = js_fold_line(raw_tprs, raw_fprs)
+            trace_list, traces = js_fold_line(raw_tprs, raw_fprs, aucs)
             trace_list, traces = js_mean_trace(mean_fpr, mean_tpr, trace_list, traces)
             trace_list, traces = js_luck_trace(trace_list, traces)
             trace_list, traces = js_tpr_std(tprs_upper, tprs_lower, mean_fpr, trace_list, traces)
@@ -763,34 +768,30 @@ def m_test5_2_rocplot(X, y, gamma, dataset, filepath, signifier, jspath):
 
     return(auc_mat, kpca_kernels, mdl_names)
 
-def m_run5_3(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, signifier):
+def m_run5_3(X, y, gamma, opt_kernel, opt_model, dataset, filepath, jspath, signifier):
 
     #Record AUC
-    mean_auc = []
+    auc_mat = []
 
     #compute kernels not preloaded into kpca
     #laplacian
     K_lap = laplacian_kernel(X, gamma=gamma)
-    # Quadratic
-    K_ply = polynomial_kernel(X=X, degree=2, gamma=gamma)
 
     kpcas = []
 
-    #kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
+    kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
     kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
-    #kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
-    #kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='precomputed')))
-    #kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
-    #kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
+    kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
 
     #Initiate models with default parameters
 
     models = []
 
     models.append(('Linear SVM', 'lin_svc', SVC(kernel='linear', probability=True)))
-    #models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
-    #models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
-    #models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
+    models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
+    models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
 
     # Initiate cross-validation
     folds = 10
@@ -809,22 +810,21 @@ def m_run5_3(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, signifie
             # To utilise precomputed kernel(s)
             if kernel == 'Laplacian KPCA':
                 X_kpca = kpca.fit_transform(K_lap)
-            elif kernel == 'Polynomial KPCA':
-                X_kpca = kpca.fit_transform(K_ply)
             else:
                 X_kpca = kpca.fit_transform(X)
 
 
             plot_scatter(X_kpca,
-                         y,
-                         'First 2 principal components after %s' % kernel,
-                         gamma=gamma,
-                         x_label='Principal component 1',
-                         y_label='Principal component 2',
-                         #output = 'show',
-                         output='save',
-                         path='%s%s_%s_%sgamma%s.png' % (filepath, nowtime, abbreviation, signifier, gamma)
-                         )
+                     y,
+                     'First 2 principal components after %s' % kernel,
+                     gamma=gamma,
+                     x_label='Principal component 1',
+                     y_label='Principal component 2',
+                     #output = 'show',
+                     output='save',
+                     path='%s%s_%s_%sgamma%s.png' % (filepath, nowtime, abbreviation, signifier, gamma),
+                     jspath='%s%s_%s_%sgamma%s.js' % (jspath, nowtime, abbreviation, signifier, gamma),
+                     )
             print('\nScatter plot of first two principal components after %s for dataset %s (γ = %s) saved.' % (kernel, dataset, gamma))
 
 
@@ -843,7 +843,7 @@ def m_run5_3(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, signifie
                     aucs = []
                     mean_fpr = np.linspace(0, 1, 100)
 
-                    mdl_name = model_name
+                    mdl_names = model_name
 
                     print('\nPerforming %s followed by %s for dataset %s\n' % (kernel, model_name, dataset))
                     #print(mdl_names)
@@ -885,34 +885,30 @@ def m_run5_3(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, signifie
 
     return(auc_mat, kpca_kernels, mdl_names)
 
-def m_run5_3_rocplot(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, signifier, jspath):
+def m_run5_3_rocplot(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, jspath, signifier):
 
     #Record AUC
-    mean_auc = []
+    auc_mat = []
 
     #compute kernels not preloaded into kpca
     #laplacian
     K_lap = laplacian_kernel(X, gamma=gamma)
-    # Quadratic
-    K_ply = polynomial_kernel(X=X, degree=2, gamma=gamma)
 
     kpcas = []
 
-    #kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
+    kpcas.append(('Linear KPCA', 'lin_kpca', KernelPCA(n_components=2, kernel='linear')))
     kpcas.append(('RBF KPCA', 'rbf_kpca',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
-    #kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
-    #kpcas.append(('Polynomial KPCA', 'ply_kpca', KernelPCA(n_components=2, kernel='precomputed')))
-    #kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
-    #kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    kpcas.append(('Laplacian KPCA', 'lap_kpca',KernelPCA(n_components=2, kernel='precomputed')))
+    kpcas.append(('Sigmoid KPCA', 'sig_kpca', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    kpcas.append(('Cosine KPCA', 'cos_kpca',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
 
     #Initiate models with default parameters
 
     models = []
 
     models.append(('Linear SVM', 'lin_svc', SVC(kernel='linear', probability=True)))
-    #models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
-    #models.append(('Polynomial Kernel SVM','ply_svc', SVC(kernel='poly', gamma=gamma, probability=True)))
-    #models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
+    models.append(('RBF Kernel SVM','rbf_svc', SVC(kernel='rbf', gamma=gamma, probability=True)))
+    models.append(('Sigmoid Kernel SVM','sig_svc', SVC(kernel='sigmoid', gamma=gamma, probability=True)))
 
     # Initiate cross-validation
     folds = 10
@@ -931,22 +927,21 @@ def m_run5_3_rocplot(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, 
             # To utilise precomputed kernel(s)
             if kernel == 'Laplacian KPCA':
                 X_kpca = kpca.fit_transform(K_lap)
-            elif kernel == 'Polynomial KPCA':
-                X_kpca = kpca.fit_transform(K_ply)
             else:
                 X_kpca = kpca.fit_transform(X)
 
 
             plot_scatter(X_kpca,
-                         y,
-                         'First 2 principal components after %s' % kernel,
-                         gamma=gamma,
-                         x_label='Principal component 1',
-                         y_label='Principal component 2',
-                         #output = 'show',
-                         output='save',
-                         path='%s%s_%s_%sgamma%s.png' % (filepath, nowtime, abbreviation, signifier, gamma)
-                         )
+                     y,
+                     'First 2 principal components after %s' % kernel,
+                     gamma=gamma,
+                     x_label='Principal component 1',
+                     y_label='Principal component 2',
+                     #output = 'show',
+                     output='save',
+                     path='%s%s_%s_%sgamma%s.png' % (filepath, nowtime, abbreviation, signifier, gamma),
+                     jspath='%s%s_%s_%sgamma%s.js' % (jspath, nowtime, abbreviation, signifier, gamma),
+                     )
             print('\nScatter plot of first two principal components after %s for dataset %s (γ = %s) saved.' % (kernel, dataset, gamma))
 
 
@@ -1015,14 +1010,14 @@ def m_run5_3_rocplot(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, 
                 plt.ylim([-0.05, 1.05])
                 plt.xlabel('False Positive Rate')
                 plt.ylabel('True Positive Rate')
-                plt.title('Receiver operating characteristic (Using %sPCA with %s, γ = %s)' % (kernel, model_name, gamma))
+                plt.title('Receiver operating characteristic (Using %s with %s, γ = %s)' % (kernel, model_name, gamma))
                 plt.legend()
                 #plt.show()
                 plt.savefig('%s%sroc_%s_%s_%s_gamma%s.png' % (filepath, nowtime, abbreviation, model_abv, signifier, gamma))
                 plt.close()
 
-                trace_list, traces = js_fold_line(raw_tprs, raw_fprs)
-                trace_list, traces = js_mean_trace(mean_fpr, mean_tpr, trace_list, traces)
+                trace_list, traces = js_fold_line(raw_tprs, raw_fprs, aucs)
+                trace_list, traces = js_mean_trace(mean_fpr, mean_tpr, mean_auc, std_auc, trace_list, traces)
                 trace_list, traces = js_luck_trace(trace_list, traces)
                 trace_list, traces = js_tpr_std(tprs_upper, tprs_lower, mean_fpr, trace_list, traces)
 
@@ -1043,7 +1038,7 @@ def most_common(inp_list):
 ### Set of functions for building plotly ROC curve
 
 
-def js_fold_line(x_vals_list, y_vals_list):
+def js_fold_line(x_vals_list, y_vals_list, aucs):
 
     #Declare trace list for calling on data
     trace_list = []
@@ -1057,20 +1052,20 @@ def js_fold_line(x_vals_list, y_vals_list):
         close_trace = "\n\ttype: 'scatter'\n};\n\n"
         trace_x = '\n\tx: ' + str(x_vals_list[i].tolist()) + ','
         trace_y = '\n\ty: ' + str(y_vals_list[i].tolist()) + ','
-        leg_name = "\n\tname: 'ROC fold %s'," % str(i+4)
+        leg_name = "\n\tname: 'ROC fold %s (AUC = %0.2s)'," % (str(i+4), aucs[i])
         line = "\n\tline:{\n\t\twidth: 2,\n\t},"
         full_trace = open_trace + trace_x + trace_y +  leg_name + line + close_trace
         traces.append(full_trace)
 
     return(trace_list, traces)
 
-def js_mean_trace(mean_x, mean_y, trace_list, traces):
+def js_mean_trace(mean_x, mean_y, mean_auc, std_auc, trace_list, traces):
 
     mean_trace = "trace" + str(int(trace_list[-1][5:]) + 1)
     trace_list.append(mean_trace)
     mean_trace_x = '\n\tx: ' + str(mean_x.tolist()) + ','
     mean_trace_y = '\n\ty: ' + str(mean_y.tolist()) + ','
-    mean_trace_close ="\n\tname: 'Mean',\n\tline: {\n\t\tcolor: 'rgb(0, 0, 225)',\n\t\twidth: 8,\n\t},\n\tmode: 'lines',\n\ttype: 'scatter'\n};"
+    mean_trace_close ="\n\tname: 'Mean (AUC = %0.2s ± %0.2s)',\n\tline: {\n\t\tcolor: 'rgb(0, 0, 225)',\n\t\twidth: 8,\n\t},\n\tmode: 'lines',\n\ttype: 'scatter'\n};" % (mean_auc, std_auc)
     mean_trace_full = "var %s = {%s%s%s" % (mean_trace, mean_trace_x, mean_trace_y, mean_trace_close)
     traces.append(mean_trace_full)
 
@@ -1093,7 +1088,7 @@ def js_construct_roc(chartname, divname, trace_list, traces, path):
         tl_stripped.append(MyStr(label))
 
     plot_write('\nvar data = %s;\n' % str(tl_stripped), path)
-    plot_write('\nvar layout = {\n\txaxis: {\n\t\tzeroline: false\n\t},\n\tyaxis: {\n\t\t},\n};\n')
+    plot_write('\nvar layout = {\n\txaxis: {\n\t\tzeroline: false\n\t},\n\tyaxis: {\n\t\t},\n};\n', path)
     plot_write('\nPlotly.newPlot(%s, data, layout);' % chartname, path)
 
 def js_luck_trace(trace_list, traces):
@@ -1184,6 +1179,8 @@ def plot_mpl_heatmap(data, row_labels, col_labels, ax=None,
         plt.show()
     elif output == 'save':
         plt.savefig(path)
+    
+    plt.close()
 
 def js_scatter_trace(X, Y, n, category):
 
@@ -1212,3 +1209,33 @@ def js_heatmap(X_labels, Y_labels, data, divname, path):
 
 def js_bars(X_data, Y_data, divname, path):
     plot_write("BARS = document.getElementById('%s');\n\nvar trace1 = {\n\tx: %s,\n\ty: %s,\n\tmarker: {\n\tcolor: '#0000FF',\n\tline: {\n\t\twidth: 1.0\n\t\t}\n\t},\n\topacity: 1,\n\torientation: 'v',\n\ttype: 'bar',\n\txaxis: 'x1',\n\tyaxis: 'y1'\n};\n\nvar data = [trace1];\n\nPlotly.plot(BARS, data);" % (divname, str(X_data), str(Y_data)), path)
+
+def mpl_simplebar(x, y, xlab, ylab, col_list, output=None, path=None):
+    
+
+    
+    fig, ax = plt.subplots(figsize=(10,7))
+    plt.bar(np.arange(len(x)), y, color=col_list)
+    
+    plt.xlabel(xlab)
+    plt.ylabel(ylab)
+    plt.xticks(np.arange(len(x)), x, rotation='vertical')
+
+    if output == 'show':
+        plt.show()
+    elif output == 'save':
+        plt.savefig(path)
+        
+    plt.close()
+    
+def get_col_list(colormap, n_cols):
+    
+    colours = []
+    
+    cmap = get_cmap(colormap, n_cols)
+    
+    for i in range(cmap.N):
+        rgb = cmap(i)[:3] # will return rgba, we take only first 3 to get rgb
+        colours.append(mcolors.rgb2hex(rgb))
+    
+    return(colours)

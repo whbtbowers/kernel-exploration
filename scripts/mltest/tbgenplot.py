@@ -46,7 +46,8 @@ X_scaled = scale(X)
 
 dataset_list, y = p2f.toybox_gen(X_scaled)
 
-print(dataset_list)
+for ds_label, dataset in dataset_list:
+    print(dataset.shape)
 
 '''
 for ds_label, dataset in dataset_list:
