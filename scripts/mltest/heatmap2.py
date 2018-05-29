@@ -20,5 +20,5 @@ harvest = np.array([[0.8, 2.4, 2.5, 3.9, 0.0, 4.0, 0.0],
                     [0.1, 2.0, 0.0, 1.4, 0.0, 1.9, 6.3]])
 
 p2f.plot_mpl_heatmap(harvest, vegetables, farmers,
-                   cmap="autumn_r", cbarlabel="harvest [t/year]", output='show')
+                   cmap="autumn", cbarlabel="harvest [t/year]", output='show')
 

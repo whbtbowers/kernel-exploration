@@ -37,39 +37,39 @@ nowdate = now.strftime("%Y-%m-%d")
 nowtime = now.strftime("%H-%M")
 
 # Name of script to trace where images came from
-scriptname = 'modeltest3'
+scriptname = 'modeltest4_2'
 
 #Select current toy dataset
 #dataset = '018'
 
-mesa = pd.read_csv('../../data/mesa/MESA_Clinical_data_full_COMBI-BIO_non-verbose.csv', sep=',', header=0, index_col=1)
+#mesa = pd.read_csv('../../data/mesa/MESA_Clinical_data_full_COMBI-BIO_non-verbose.csv', sep=',', header=0, index_col=1)
 
 #List of toy datasets to test
-#dataset_list = [('dataset_017', '017'), ('dataset_018','018'), ('datase_019', '019'), ('dataset_020', '020'), ('dataset_021', '021'), ('dataset_022', '022'), ('dataset_023', '023'), ('dataset_024', '024')]
-#dataset_list = [('dataset_021', '021')]
-#dataset_list = [('MESA_dataset', mesa)]
+#dataset_list = ['017', '018', '019', 020', '021', '022', '023', '024']
+dataset_list = ['021']
+#dataset_list = ['MESA']
 
 
-for dataset_name, dataset in dataset_list:
+for dataset in dataset_list:
 
-    print('\nRunning %s with %s:' % (scriptname, dataset_name))
+    print('\nRunning %s with %s:' % (scriptname, dataset))
 
     #Create directory if directory does not exist
-    filepath = '../../figs/out/%s/%s/%s/' % (scriptname, nowdate, dataset_name)
+    filepath = '../../figs/out/%s/%s/%s/' % (scriptname, nowdate, dataset)
 
     if not os.path.exists(filepath):
         os.makedirs(filepath)
 
     # Import  dataset and target
-    if dataset_name == 'MESA_dataset':
-        X = mesa
+    if dataset == 'MESA':
+        X = pd.read_csv('../../data/mesa/MESA_Clinical_data_full_COMBI-BIO_non-verbose.csv', sep=',', header=0, index_col=1)
 
         X = filt_imp(X, 0.1)
 
     else:
         X = pd.read_csv('../../data/simulated/mvnsim/mvnsim' + dataset + '.csv', sep=',', header=0, index_col=0)
 
-    y = np.load('../../data/simulated/mvnsim/target' + dataset + '.npy')
+        y = np.load('../../data/simulated/mvnsim/target' + dataset + '.npy')
     #print(y)
     #print(y.shape)
     #print(X.shape)
@@ -79,8 +79,8 @@ for dataset_name, dataset in dataset_list:
 
     distribution_boxplot(X,
                          y,
-                         "Initial category 1 distribution of %s" % dataset_name,
-                         "Initial category 0 distribution of %s" % dataset_name,
+                         "Initial category 1 distribution of dataset %s" % dataset,
+                         "Initial category 0 distribution of distribution %s" % dataset,
                          #output='show'
                          #output='plotly',
                          #ply_title="Initial distribution of dataset %s" % dataset,
@@ -88,7 +88,7 @@ for dataset_name, dataset in dataset_list:
                          path='%sinitialdist_%s.png' % (filepath, nowtime)
                          )
 
-    print('\nBoxplot of initial data for %s saved.' % dataset)
+    print('\nBoxplot of initial data for dataset %s saved.' % dataset)
 
 
     ## PREPROCESSING ##
@@ -179,14 +179,11 @@ for dataset_name, dataset in dataset_list:
             mean_fpr = np.linspace(0, 1, 100)
 
             mdl_names.append(model_name)
-            print('\nPerforming ' + model_name + ' after ' + kernel + 'PCA')
-            #print(mdl_names)
+
+            print('\nPerforming %s followed by %s for dataset %s\n' % (kernel, model_name, dataset))
 
             # To count number of folds
             i = 0
-
-            #Initiate plot
-            fig = plt.figure(figsize=(15, 9))
 
             for train, test in cv.split(X_kpca, y):
 
@@ -232,22 +229,23 @@ for dataset_name, dataset in dataset_list:
             #plt.show()
             plt.savefig('%sroc_%spca_%s_gamma%s_%s.png' % (filepath, abbreviation, model_abv, gamma, nowtime))
             plt.close()
-'''
-'''
+
+            '''
             #Convert to plotly object
             plotly_fig = tls.mpl_to_plotly(fig)
             pp = pprint.PrettyPrinter(indent=4)
             pp.pprint(plotly_fig['layout'])
             py.iplot(plotly_fig, filename='roc-curve')
-'''
+            '''
 
-'''
             # Display mean roc auc
             print("Mean area under curve for %sPCA followed by %s: %0.2f" % (kernel, model_name, mean_auc))
 
+
+
     # End of dataset run
     print('\n###################################################################')
-'''
+
 
 #Calculate and display time taken or script to run
 EndTime = (time.time() - StartTime)

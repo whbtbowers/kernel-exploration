@@ -60,7 +60,7 @@ def plot_scatter(x, y, title, gamma=None, x_label='x coordinate', y_label='y coo
 
     trace1 = js_scatter_trace(x[y==0, 0],
                               x[y==0, 1],
-                              1, 
+                              1,
                               cat0
                               )
 
@@ -139,7 +139,7 @@ def filt_imp(X, threshold):
 
     # Display metrics for initial data
     n_cols, n_rows = X.shape
-    print('\nInitial data contains %s columns and %s rows.' % (n_rows, n_cols))
+    print('\nInitial data contains %s rows and %s columns.' % (n_rows, n_cols))
     col_names = list(X)
     #print('Categories:')
     #print(col_names)
@@ -172,7 +172,7 @@ def filt_imp(X, threshold):
 
     n_cols, n_rows = X.shape
     print('\n%s columns in dataset removed due to ≤10%% of cells populated.' % dropped_cols)
-    print('\nAfter columns ≤ 10%% populated removed, data contains %s columns and %s rows.' % (n_rows, n_cols))
+    print('\nAfter columns ≤ 10%% populated removed, data contains %s columns and rows %s.' % (n_rows, n_cols))
 
     col_names = list(X)
 
@@ -197,7 +197,7 @@ def filt_imp(X, threshold):
 
     n_cols, n_rows = X.shape
     print('\n%s rows in remaining dataset removed due to ≤10%% of cells populated.' % dropped_rows)
-    print('\nAfter columns and rows ≤ 10%% populated removed, data contains %s columns and %s rows.' % (n_rows, n_cols))
+    print('\nAfter columns and rows ≤ 10%% populated removed, data contains %s rows and %s columns.' % (n_rows, n_cols))
 
 
     # Convert dataframe to numpy matrix for scikit learn
@@ -209,7 +209,7 @@ def filt_imp(X, threshold):
     X_imputed_df = pd.DataFrame.from_records(X_imputed)
     #print(X_imputed.shape)
     n_cols, n_rows = X_imputed.shape
-    print('\nAfter imputation, data contains %s columns and %s rows.' % (n_rows, n_cols))
+    print('\nAfter imputation, data contains %s rows and %s columns.\n' % (n_rows, n_cols))
 
     return(X_imputed_df)
 
@@ -356,7 +356,7 @@ def toybox_gen(inp_df):
     cov2 = np.array(df_cov)
 
     init_mean = inp_df.mean(axis=1).tolist()
-    print('Means calculated\n')    
+    print('Means calculated\n')
     mean1 = np.array([init_mean, init_mean, init_mean, init_mean, init_mean, init_mean, np.add(init_mean, 0.5), np.add(init_mean, 0.5), np.add(init_mean, 1.0), np.add(init_mean, 1.5), np.add(init_mean, 2.0), np.add(init_mean, 2.5), np.add(init_mean, 3.0)])
     #mean1 = np.array([init_mean])
     mean2 =  init_mean
@@ -755,7 +755,7 @@ def m_test5_2_rocplot(X, y, gamma, dataset, filepath, jspath, signifier):
             plt.close()
 
             trace_list, traces = js_fold_line(raw_tprs, raw_fprs, aucs)
-            trace_list, traces = js_mean_trace(mean_fpr, mean_tpr, trace_list, traces)
+            trace_list, traces = js_mean_trace(mean_fpr, mean_tpr, mean_auc, std_auc, trace_list, traces)
             trace_list, traces = js_luck_trace(trace_list, traces)
             trace_list, traces = js_tpr_std(tprs_upper, tprs_lower, mean_fpr, trace_list, traces)
 
@@ -801,6 +801,9 @@ def m_run5_3(X, y, gamma, opt_kernel, opt_model, dataset, filepath, jspath, sign
 
     kpca_kernel = 0
     mdl_name = 0
+
+    # Declare list for expected variances
+    exp_vars = []
 
     for kernel, abbreviation, kpca in kpcas:
 
@@ -919,6 +922,9 @@ def m_run5_3_rocplot(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, 
     kpca_kernel = 0
     mdl_name = 0
 
+    # Declare array for explained variances
+    #exp_vars = []
+
     for kernel, abbreviation, kpca in kpcas:
 
         if opt_kernel == kernel:
@@ -930,6 +936,11 @@ def m_run5_3_rocplot(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, 
             else:
                 X_kpca = kpca.fit_transform(X)
 
+            # Get explained variance
+            exp_var = np.var(X_kpca, axis=0)
+            print('Explained variance of first principal component: %s' % exp_var[0])
+            print('Explained variance of second principal component: %s' % exp_var[1])
+            #exp_vars.append(exp_var)
 
             plot_scatter(X_kpca,
                      y,
@@ -1088,8 +1099,8 @@ def js_construct_roc(chartname, divname, trace_list, traces, path):
         tl_stripped.append(MyStr(label))
 
     plot_write('\nvar data = %s;\n' % str(tl_stripped), path)
-    plot_write('\nvar layout = {\n\txaxis: {\n\t\tzeroline: false\n\t},\n\tyaxis: {\n\t\t},\n};\n', path)
-    plot_write('\nPlotly.newPlot(%s, data, layout);' % chartname, path)
+    plot_write("var layout = {\n\txaxis: {\n\t\ttitle: 'False positive rate',\n\t\ttitlefont: {\n\t\t\tfamily: 'Courier New, monospace',\n\t\t\tsize: 18,\n\t\t\tcolor: '#7f7f7f'\n\t\t},\n\t\tzeroline: true\n\t},\n\tyaxis: {\n\t\ttitle: 'True positive rate',\n\t\ttitlefont: {\n\t\t\tfamily: 'Courier New, monospace',\n\t\t\tcolor: '#7f7f7f'\n\t\t},\n\t\tzeroline: true\n\t},\n};\n\n", path)
+    plot_write('Plotly.newPlot(%s, data, layout);' % chartname, path)
 
 def js_luck_trace(trace_list, traces):
 
@@ -1100,7 +1111,7 @@ def js_luck_trace(trace_list, traces):
 def js_tpr_std(tpr_std_upper, tpr_std_lower, fpr_std, trace_list, traces):
 
     trace_list = ['trace2'] + trace_list
-    traces = ["var trace2 = {\n\tx: %s,\n\ty: %s,\n\tname: 'Mean ±1 standard deviation',\n\tline:{\n\t\twidth: 0,\n\t},\n\tfill:'tonexty',\n\tmode: 'lines',\n\ttype: 'scatter'\n};\n\n" % (str(tpr_std_upper.tolist()), str(fpr_std.tolist()))] + traces
+    traces = ["var trace2 = {\n\tx: %s,\n\ty: %s,\n\tname: 'Mean ±1 standard deviation',\n\tline:{\n\t\twidth: 0,\n\t\tcolor: '#808080'\n\t},\n\tfill:'tonexty',\n\tmode: 'lines',\n\ttype: 'scatter'\n};\n\n" % (str(tpr_std_upper.tolist()), str(fpr_std.tolist()))] + traces
 
     trace_list = ['trace1'] + trace_list
     traces = ["var trace1 = {\n\tx: %s,\n\ty: %s,\n\tname: '',\n\tline:{\n\t\twidth: 0,\n\t},\n\tfill: 'none',\n\tmode: 'lines',\n\ttype: 'scatter'\n};\n\n" % (str(tpr_std_lower.tolist()), str(fpr_std.tolist()))] + traces
@@ -1179,7 +1190,7 @@ def plot_mpl_heatmap(data, row_labels, col_labels, ax=None,
         plt.show()
     elif output == 'save':
         plt.savefig(path)
-    
+
     plt.close()
 
 def js_scatter_trace(X, Y, n, category):
@@ -1205,18 +1216,18 @@ def js_construct_scatter(divname, path, *traces):
     plot_write("var data = %s;\n\nPlotly.plot(SCATTER, data);" % str(t_list), path)
 
 def js_heatmap(X_labels, Y_labels, data, divname, path):
-    plot_write("HEATMAP = document.getElementById('%s');\n\nvar trace1 = {\n\tx: %s,\n\ty: %s,\n\tz: %s,\n\tcolorscale: 'YIOrRd',\n\ttype: 'heatmap',\n\tcolorbar:{\n\t\ttitle:'Mean area under ROC curve',\n\t\ttitleside:'right',\n\t},\n};\n\nvar data = [trace1];\n\nvar layout = {\n\tlegend: {\n\t\tbgcolor: '#FFFFFF',\n\t\tfont: {color: '#4D5663'}\n\t},\n\tpaper_bgcolor: '#FFFFFF',\n\tplot_bgcolor: '#FFFFFF',\n\txaxis1: {\n\t\tgridcolor: '#E1E5ED',\n\t\ttickfont: {color: '#4D5663'},\n\t\ttitle: '',\n\t\ttitlefont: {color: '#4D5663'},\n\t\tzerolinecolor: '#E1E5ED'\n\t},\n\tyaxis1: {\n\t\tgridcolor: '#E1E5ED',\n\t\ttickfont: {color: '#4D5663'},\n\t\ttitle: '',\n\t\ttitlefont: {color: '#4D5663'},\n\t\tzeroline: false,\n\t\tzerolinecolor: '#E1E5ED'\n\t}\n};\n\nPlotly.plot(HEATMAP, data, layout);" % (divname, X_labels, Y_labels, str(data.as_list())), path)
+    plot_write("HEATMAP = document.getElementById('%s');\n\nvar trace1 = {\n\tx: %s,\n\ty: %s,\n\tz: %s,\n\tcolorscale: 'YIOrRd',\n\ttype: 'heatmap',\n\tcolorbar:{\n\t\ttitle:'Mean area under ROC curve after 10-flod cross validation',\n\t\ttitleside:'right',\n\t},\n};\n\nvar data = [trace1];\n\nvar layout = {\n\tlegend: {\n\t\tbgcolor: '#FFFFFF',\n\t\tfont: {color: '#4D5663'}\n\t},\n\tpaper_bgcolor: '#FFFFFF',\n\tplot_bgcolor: '#FFFFFF',\n\txaxis1: {\n\t\tgridcolor: '#E1E5ED',\n\t\ttickfont: {color: '#4D5663'},\n\t\ttitle: '',\n\t\ttitlefont: {color: '#4D5663'},\n\t\tzerolinecolor: '#E1E5ED'\n\t},\n\tyaxis1: {\n\t\tgridcolor: '#E1E5ED',\n\t\ttickfont: {color: '#4D5663'},\n\t\ttitle: '',\n\t\ttitlefont: {color: '#4D5663'},\n\t\tzeroline: false,\n\t\tzerolinecolor: '#E1E5ED'\n\t}\n};\n\nPlotly.plot(HEATMAP, data, layout);" % (divname, X_labels, Y_labels, str(data.tolist())), path)
 
-def js_bars(X_data, Y_data, divname, path):
-    plot_write("BARS = document.getElementById('%s');\n\nvar trace1 = {\n\tx: %s,\n\ty: %s,\n\tmarker: {\n\tcolor: '#0000FF',\n\tline: {\n\t\twidth: 1.0\n\t\t}\n\t},\n\topacity: 1,\n\torientation: 'v',\n\ttype: 'bar',\n\txaxis: 'x1',\n\tyaxis: 'y1'\n};\n\nvar data = [trace1];\n\nPlotly.plot(BARS, data);" % (divname, str(X_data), str(Y_data)), path)
+def js_bars(X_data, Y_data, hmp_labels, path):
+    plot_write("var summBar = document.getElementById('summary-bar');\n\nvar x = %s;\nvar y = %s;\n\nvar trace1 = {\n\tx:x,\n\ty:y,\n\tmarker: {\n\t\tcolor: col_list,\n\t\tline: {\n\t\t\twidth: 1.0\n\t\t}/n/t},/n/topacity: 1,\n\torientation: 'v',\n\ttype: 'bar',\n\txaxis: 'x1',\n\tyaxis: 'y1'\n};\n\nvar data = [trace1];\n\nPlotly.plot(summBar, data);\n\nvar strList = %s;\n\n simpBar.on('plotly_click', function(data){\n\tvar char = x.indexOf(data.points[0].x);\n\tvar corr = strList[char];\n\twindow.open('heatpop' + corr +'.html');\n});" % (X_data, Y_data, hmp_labels), path)
 
 def mpl_simplebar(x, y, xlab, ylab, col_list, output=None, path=None):
-    
 
-    
+
+
     fig, ax = plt.subplots(figsize=(10,7))
     plt.bar(np.arange(len(x)), y, color=col_list)
-    
+
     plt.xlabel(xlab)
     plt.ylabel(ylab)
     plt.xticks(np.arange(len(x)), x, rotation='vertical')
@@ -1225,17 +1236,17 @@ def mpl_simplebar(x, y, xlab, ylab, col_list, output=None, path=None):
         plt.show()
     elif output == 'save':
         plt.savefig(path)
-        
+
     plt.close()
-    
+
 def get_col_list(colormap, n_cols):
-    
+
     colours = []
-    
+
     cmap = get_cmap(colormap, n_cols)
-    
+
     for i in range(cmap.N):
         rgb = cmap(i)[:3] # will return rgba, we take only first 3 to get rgb
         colours.append(mcolors.rgb2hex(rgb))
-    
+
     return(colours)
