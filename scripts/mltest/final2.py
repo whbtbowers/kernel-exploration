@@ -99,8 +99,6 @@ for toy_label, toy_X in toy_dataset_list:
         
         amat_dict[gamma].append(t1_auc_mat)
         
-        p2f.plot_mpl_heatmap(t1_auc_mat, t1_kpcas, t1_models, cmap="Oranges", cbarlabel="Mean area under ROC curve after 10-fold cross validation", output='save', path='%s%s_tier1_gs' % (filepath, nowtime))
-        
         t1_mmas.append(np.mean(t1_auc_mat))
          
     # Select optimal t1 gamma 
@@ -167,7 +165,8 @@ for toy_label, toy_X in toy_dataset_list:
         
         amat_dict[gamma].append(t2_auc_mat)
         
-        p2f.plot_mpl_heatmap(t2_auc_mat, t2_kpcas, t2_models, cmap="autumn", cbarlabel="Mean area under ROC curve after 10-fold cross validation", output='save', path='%s%s_tier1_gs' % (filepath, nowtime))
+        p2f.plot_mpl_heatmap(t2_auc_mat, t2_kpcas, t2_models, cmap="autumn", cbarlabel="Mean area under ROC curve after 10-fold cross validation", output='save', path='%s%s_tier2_heatmap_gamma_%s.png' % (filepath, nowtime, gamma))
+        p2f.js_heatmap(t2_kpcas, t2_models, t2_auc_mat, "hmapgamma%s" % (gamma), "%s%sheatmap_gamma%s.js" % (plotpath, nowtime, gamma))
         
         t2_mmas.append(np.mean(t2_auc_mat))
         
@@ -245,6 +244,7 @@ print('rrun_aucs:')
 print(rrun_aucs[0][0])
 
 p2f.mpl_simplebar(rds_labels, rrun_aucs[0][0], 'Target outcome', 'Mean AUC', p2f.get_col_list('autumn', len(rds_labels)), output='show')
+p2f.js_bars(rds_labels, rrun_aucs[0][0], '%s%s_summarybars.js' % (nowtime, plotpath))
      
 #Calculate and display time taken or script to run
 print("\nTime taken for script to run is %.2f seconds\n" % (time.time() - StartTime))
