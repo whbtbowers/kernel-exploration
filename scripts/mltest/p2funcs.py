@@ -9,10 +9,8 @@ import datetime
 import seaborn as sns
 sns.set(style="ticks")
 sns.set(style='white')
-
-import plotly.plotly as py
-import plotly.tools as tls
-tls.set_credentials_file(username='whtbowers', api_key='skkoCIGowBQdx7ZTJMzM')
+import smtplib
+from email.mime.text import MIMEText as text
 
 import pandas as pd
 import numpy as np
@@ -138,19 +136,10 @@ def filt_imp(X, threshold):
     X = X.replace('No', 0)
 
     # Display metrics for initial data
-    n_cols, n_rows = X.shape
+    n_rows, n_cols = X.shape
     print('\nInitial data contains %s rows and %s columns.' % (n_rows, n_cols))
     col_names = list(X)
-    #print('Categories:')
-    #print(col_names)
 
-    # Remove ID column and display metrics
-    #X = X.drop(columns='study')
-
-    #n_cols, n_rows = X.shape
-    #print("\nAfter dropping 'study' column, data contains %s columns and %s rows." % (n_cols, n_rows))
-
-    #col_names = list(X)
 
     # Initiate counter to count number of null values per column
     dropped_cols = 0
@@ -170,9 +159,9 @@ def filt_imp(X, threshold):
             X = X.drop(columns=i)
             dropped_cols += 1
 
-    n_cols, n_rows = X.shape
+    n_rows, n_cols = X.shape
     print('\n%s columns in dataset removed due to ≤10%% of cells populated.' % dropped_cols)
-    print('\nAfter columns ≤ 10%% populated removed, data contains %s columns and rows %s.' % (n_rows, n_cols))
+    print('\nAfter columns ≤ 10%% populated removed, data contains %s rows and %s columns.' % (n_rows, n_cols))
 
     col_names = list(X)
 
@@ -195,7 +184,7 @@ def filt_imp(X, threshold):
             X = X.drop(index=i)
             dropped_rows += 1
 
-    n_cols, n_rows = X.shape
+    n_rows, n_cols = X.shape
     print('\n%s rows in remaining dataset removed due to ≤10%% of cells populated.' % dropped_rows)
     print('\nAfter columns and rows ≤ 10%% populated removed, data contains %s rows and %s columns.' % (n_rows, n_cols))
 
@@ -208,7 +197,7 @@ def filt_imp(X, threshold):
     X_imputed = impute.fit_transform(X)
     X_imputed_df = pd.DataFrame.from_records(X_imputed)
     #print(X_imputed.shape)
-    n_cols, n_rows = X_imputed.shape
+    n_rows, n_cols = X_imputed.shape
     print('\nAfter imputation, data contains %s rows and %s columns.\n' % (n_rows, n_cols))
 
     return(X_imputed_df)
@@ -239,9 +228,9 @@ def m_test5(X, y, gamma, dataset, filepath, signifier):
     kpcas.append(('Linear KPCA', 'lin_k', KernelPCA(n_components=2, kernel='linear')))
     kpcas.append(('RBF KPCA', 'rbf_k',KernelPCA(n_components=2, kernel='rbf', gamma=gamma)))
     kpcas.append(('Laplacian KPCA', 'lap_k',KernelPCA(n_components=2, kernel='precomputed')))
-    #kpcas.append(('Polynomial KPCA', 'ply_k', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
-    #kpcas.append(('Sigmoid KPCA', 'sig_k', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
-    #kpcas.append(('Cosine KPCA', 'cos_k',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
+    kpcas.append(('Polynomial KPCA', 'ply_k', KernelPCA(n_components=2, kernel='poly', gamma=gamma)))
+    kpcas.append(('Sigmoid KPCA', 'sig_k', KernelPCA(n_components=2, kernel='sigmoid', gamma=gamma)))
+    kpcas.append(('Cosine KPCA', 'cos_k',KernelPCA(n_components=2, kernel='cosine', gamma=gamma)))
 
     #Initiate models with default parameters
 
@@ -352,13 +341,13 @@ def toybox_gen(inp_df):
     df_cov = np.cov(inp_df)
     print('\nCovariance calculated\n')
     cov1 = np.array([df_cov/40, df_cov/20, df_cov/10, df_cov/5, df_cov/2, df_cov/1.5, df_cov/1.5, df_cov, df_cov, df_cov, df_cov, df_cov, df_cov])
-    #cov1 = np.array([df_cov/40])
+    # cov1 = np.array([df_cov/40])
     cov2 = np.array(df_cov)
 
     init_mean = inp_df.mean(axis=1).tolist()
     print('Means calculated\n')
     mean1 = np.array([init_mean, init_mean, init_mean, init_mean, init_mean, init_mean, np.add(init_mean, 0.5), np.add(init_mean, 0.5), np.add(init_mean, 1.0), np.add(init_mean, 1.5), np.add(init_mean, 2.0), np.add(init_mean, 2.5), np.add(init_mean, 3.0)])
-    #mean1 = np.array([init_mean])
+    # mean1 = np.array([init_mean])
     mean2 =  init_mean
 
     dataset_list = []
@@ -391,6 +380,49 @@ def toybox_gen(inp_df):
 
     return(dataset_list, target)
 
+def multisize_toybox(inp_df):
+
+    df_cov = np.cov(inp_df)
+    print('\nCovariance calculated\n')
+
+    n_var = 500
+
+    toy_cov = df_cov[0:n_var, 0:n_var]
+
+    n_sam_list = [500, 1000, 1500, 2000, 2500, 3000, 3500]
+
+    cov1 = toy_cov/1.75
+    cov2 = toy_cov
+
+    mean = inp_df.mean(axis=1).tolist()[:n_var]
+
+    print('Means calculated\n')
+
+    dataset_list = []
+    target_list = []
+
+    # counter for labelling dataset
+    counter = 1
+
+    for size in n_sam_list:
+
+        d1_x = multivariate_normal(mean, cov1, int(size/2))
+        d2_x = multivariate_normal(mean, cov2, int(size/2))
+
+        #Put components together
+        mvn_sim = np.vstack((d1_x, d2_x))
+        mvn_sim_df = pd.DataFrame.from_records(mvn_sim)
+        dataset_list.append(('ds00%d' % counter, mvn_sim_df))
+        print('Simulated dataset ds%d generated' % counter)
+        counter += 1
+
+        # Generate target array
+        target = np.zeros(size, dtype=int)
+        target[0:int((size/2))] = '1'
+        target_list.append(target)
+        print('Simulated outcome for ds%d generated\n' % counter)
+
+    return(dataset_list, target_list)
 
 def tsplit(inp_df):
 
@@ -1215,11 +1247,11 @@ def js_construct_scatter(divname, path, *traces):
 
     plot_write("var data = %s;\n\nPlotly.plot(SCATTER, data);" % str(t_list), path)
 
-def js_heatmap(X_labels, Y_labels, data, divname, path):
+def js_heatmap(data, X_labels, Y_labels, divname, path):
     plot_write("HEATMAP = document.getElementById('%s');\n\nvar trace1 = {\n\tx: %s,\n\ty: %s,\n\tz: %s,\n\tcolorscale: 'YIOrRd',\n\ttype: 'heatmap',\n\tcolorbar:{\n\t\ttitle:'Mean area under ROC curve after 10-flod cross validation',\n\t\ttitleside:'right',\n\t},\n};\n\nvar data = [trace1];\n\nvar layout = {\n\tlegend: {\n\t\tbgcolor: '#FFFFFF',\n\t\tfont: {color: '#4D5663'}\n\t},\n\tpaper_bgcolor: '#FFFFFF',\n\tplot_bgcolor: '#FFFFFF',\n\txaxis1: {\n\t\tgridcolor: '#E1E5ED',\n\t\ttickfont: {color: '#4D5663'},\n\t\ttitle: '',\n\t\ttitlefont: {color: '#4D5663'},\n\t\tzerolinecolor: '#E1E5ED'\n\t},\n\tyaxis1: {\n\t\tgridcolor: '#E1E5ED',\n\t\ttickfont: {color: '#4D5663'},\n\t\ttitle: '',\n\t\ttitlefont: {color: '#4D5663'},\n\t\tzeroline: false,\n\t\tzerolinecolor: '#E1E5ED'\n\t}\n};\n\nPlotly.plot(HEATMAP, data, layout);" % (divname, X_labels, Y_labels, str(data.tolist())), path)
 
-def js_bars(X_data, Y_data, hmp_labels, path):
-    plot_write("var summBar = document.getElementById('summary-bar');\n\nvar x = %s;\nvar y = %s;\n\nvar trace1 = {\n\tx:x,\n\ty:y,\n\tmarker: {\n\t\tcolor: col_list,\n\t\tline: {\n\t\t\twidth: 1.0\n\t\t}/n/t},/n/topacity: 1,\n\torientation: 'v',\n\ttype: 'bar',\n\txaxis: 'x1',\n\tyaxis: 'y1'\n};\n\nvar data = [trace1];\n\nPlotly.plot(summBar, data);\n\nvar strList = %s;\n\n simpBar.on('plotly_click', function(data){\n\tvar char = x.indexOf(data.points[0].x);\n\tvar corr = strList[char];\n\twindow.open('heatpop' + corr +'.html');\n});" % (X_data, Y_data, hmp_labels), path)
+def js_bars(X_data, Y_data, path):
+    plot_write("var summBar = document.getElementById('summary-bar');\n\nvar x = %s;\nvar y = %s;\n\nvar trace1 = {\n\tx:x,\n\ty:y,\n\tmarker: {\n\t\tcolor: col_list,\n\t\tline: {\n\t\t\twidth: 1.0\n\t\t}/n/t},/n/topacity: 1,\n\torientation: 'v',\n\ttype: 'bar',\n\txaxis: 'x1',\n\tyaxis: 'y1'\n};\n\nvar data = [trace1];\n\nPlotly.plot(summBar, data);\n\nvar strList = INSERT ABV LIST;\n\n simpBar.on('plotly_click', function(data){\n\tvar char = x.indexOf(data.points[0].x);\n\tvar corr = strList[char];\n\twindow.open('GIVE HTML');\n});" % (X_data, Y_data), path)
 
 def mpl_simplebar(x, y, xlab, ylab, col_list, output=None, path=None):
 
@@ -1250,3 +1282,20 @@ def get_col_list(colormap, n_cols):
         colours.append(mcolors.rgb2hex(rgb))
 
     return(colours)
+
+def endalert(subject, content):
+
+    fromaddr = "whb17@ic.ac.uk"
+    toaddrs  = "whtbowers@gmail.com"
+    subject = 'subject'
+
+    msg = text(content)
+
+    msg['Subject'] = subject
+    msg['From'] = fromaddr
+    msg['To'] = toaddrs
+
+    server = smtplib.SMTP('localhost')
+    server.set_debuglevel(1)
+    server.sendmail(fromaddr, toaddrs, msg.as_string())
+    server.quit()
