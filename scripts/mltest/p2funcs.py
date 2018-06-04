@@ -920,7 +920,7 @@ def m_run5_3(X, y, gamma, opt_kernel, opt_model, dataset, filepath, jspath, sign
 
     return(auc_mat, kpca_kernels, mdl_names)
 
-def m_run5_3_rocplot(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, jspath, signifier):
+def m_run5_3_rocplot(X, y, gamma, opt_kernel, opt_model, dataset, filepath, jspath, signifier):
 
     #Record AUC
     auc_mat = []
@@ -957,21 +957,24 @@ def m_run5_3_rocplot(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, 
     # Declare array for explained variances
     #exp_vars = []
 
+
     for kernel, abbreviation, kpca in kpcas:
 
-        if opt_kernel == kernel:
+        if kernel == opt_kernel:
 
-            kpca_kernels = kernel
+            kpca_kernel = kernel
+
+            X_kpca = 0
+
             # To utilise precomputed kernel(s)
             if kernel == 'Laplacian KPCA':
                 X_kpca = kpca.fit_transform(K_lap)
             else:
                 X_kpca = kpca.fit_transform(X)
 
-            # Get explained variance
             exp_var = np.var(X_kpca, axis=0)
-            print('Explained variance of first principal component: %s' % exp_var[0])
-            print('Explained variance of second principal component: %s' % exp_var[1])
+            print('\nExplained variance of first principal component: %s' % exp_var[0])
+            print('\nExplained variance of second principal component: %s' % exp_var[1])
             #exp_vars.append(exp_var)
 
             plot_scatter(X_kpca,
@@ -987,90 +990,92 @@ def m_run5_3_rocplot(X, y, opt_gamma, opt_kernel, opt_model, dataset, filepath, 
                      )
             print('\nScatter plot of first two principal components after %s for dataset %s (γ = %s) saved.' % (kernel, dataset, gamma))
 
-
-
-            # Declare names of models deployed
-            mdl_names = []
-
             #Record mean_aucs
             auc_mat_row = []
 
             for model_name, model_abv, model in models:
 
-                raw_tprs = []
-                raw_fprs = []
-                tprs = []
-                aucs = []
-                mean_fpr = np.linspace(0, 1, 100)
+                if opt_model == model_name:
 
-                mdl_names.append(model_name)
-                print('\nPerforming %s followed by %s for dataset %s\n' % (kernel, model_name, dataset))
-                #print(mdl_names)
+                    mdl_name = model_name
 
-                # To count number of folds
-                i = 0
+                    raw_tprs = []
+                    raw_fprs = []
+                    tprs = []
+                    aucs = []
+                    mean_fpr = np.linspace(0, 1, 100)
 
-                #Initiate plot
-                fig = plt.figure(figsize=(15, 9))
 
-                for train, test in cv.split(X_kpca, y):
+                    print('\nPerforming %s followed by %s for dataset %s\n' % (kernel, model_name, dataset))
+                    #print(mdl_names)
 
-                    probas_ = model.fit(X_kpca[train], y[train]).predict_proba(X_kpca[test])
+                    # To count number of folds
+                    i = 0
 
-                    # Compute ROC curve and area the curve
+                    #Initiate plot
+                    fig = plt.figure(figsize=(15, 9))
 
-                    fpr, tpr, thresholds = roc_curve(y[test], probas_[:, 1])
-                    tprs.append(interp(mean_fpr, fpr, tpr))
-                    tprs[-1][0] = 0.0
-                    roc_auc = auc(fpr, tpr)
-                    raw_tprs.append(tpr)
-                    raw_fprs.append(fpr)
-                    aucs.append(roc_auc)
-                    plt.plot(fpr, tpr, lw=1, alpha=0.3,
-                             label='ROC fold %d (AUC = %0.2f)' % (i+1, roc_auc))
+                    for train, test in cv.split(X_kpca, y):
 
-                    i += 1
+                        probas_ = model.fit(X_kpca[train], y[train]).predict_proba(X_kpca[test])
 
-                plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r',
-                         label='Luck', alpha=.8)
+                        # Compute ROC curve and area the curve
 
-                mean_tpr = np.mean(tprs, axis=0)
-                mean_tpr[-1] = 1.0
-                mean_auc = auc(mean_fpr, mean_tpr)
-                auc_mat_row.append(mean_auc)
-                std_auc = np.std(aucs)
-                plt.plot(mean_fpr, mean_tpr, color='b',
-                         label=r'Mean ROC (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc),
-                         lw=2, alpha=.8)
+                        fpr, tpr, thresholds = roc_curve(y[test], probas_[:, 1])
+                        tprs.append(interp(mean_fpr, fpr, tpr))
+                        tprs[-1][0] = 0.0
+                        roc_auc = auc(fpr, tpr)
+                        raw_tprs.append(tpr)
+                        raw_fprs.append(fpr)
+                        aucs.append(roc_auc)
+                        plt.plot(fpr, tpr, lw=1, alpha=0.3,
+                                 label='ROC fold %d (AUC = %0.2f)' % (i+1, roc_auc))
 
-                std_tpr = np.std(tprs, axis=0)
-                tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
-                tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
-                plt.fill_between(mean_fpr, tprs_lower, tprs_upper, color='grey', alpha=.2,
-                                 label=r'$\pm$ 1 std. dev.')
+                        i += 1
 
-                plt.xlim([-0.05, 1.05])
-                plt.ylim([-0.05, 1.05])
-                plt.xlabel('False Positive Rate')
-                plt.ylabel('True Positive Rate')
-                plt.title('Receiver operating characteristic (Using %s with %s, γ = %s)' % (kernel, model_name, gamma))
-                plt.legend()
-                #plt.show()
-                plt.savefig('%s%sroc_%s_%s_%s_gamma%s.png' % (filepath, nowtime, abbreviation, model_abv, signifier, gamma))
-                plt.close()
+                    plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r',
+                             label='Luck', alpha=.8)
 
-                trace_list, traces = js_fold_line(raw_tprs, raw_fprs, aucs)
-                trace_list, traces = js_mean_trace(mean_fpr, mean_tpr, mean_auc, std_auc, trace_list, traces)
-                trace_list, traces = js_luck_trace(trace_list, traces)
-                trace_list, traces = js_tpr_std(tprs_upper, tprs_lower, mean_fpr, trace_list, traces)
+                    mean_tpr = np.mean(tprs, axis=0)
+                    mean_tpr[-1] = 1.0
+                    mean_auc = auc(mean_fpr, mean_tpr)
+                    auc_mat_row.append(mean_auc)
+                    print('mean_auc:')
+                    print(mean_auc)
+                    std_auc = np.std(aucs)
+                    plt.plot(mean_fpr, mean_tpr, color='b',
+                             label=r'Mean ROC (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc),
+                             lw=2, alpha=.8)
 
-                js_construct_roc('ROCPLOT', 'rocplot%s_%s_%s_%s' % (nowtime, dataset, abbreviation, model_abv), trace_list, traces, '%s%s_%s_%s_gamma%s_roc.js' % (jspath, nowtime, kernel, model_name, gamma))
+                    std_tpr = np.std(tprs, axis=0)
+                    tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
+                    tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
+                    plt.fill_between(mean_fpr, tprs_lower, tprs_upper, color='grey', alpha=.2,
+                                     label=r'$\pm$ 1 std. dev.')
 
-        auc_mat.append(auc_mat_row)
+                    plt.xlim([-0.05, 1.05])
+                    plt.ylim([-0.05, 1.05])
+                    plt.xlabel('False Positive Rate')
+                    plt.ylabel('True Positive Rate')
+                    plt.title('Receiver operating characteristic (Using %s with %s, γ = %s)' % (kernel, model_name, gamma))
+                    plt.legend()
+                    #plt.show()
+                    plt.savefig('%s%sroc_%s_%s_%s_gamma%s.png' % (filepath, nowtime, abbreviation, model_abv, signifier, gamma))
+                    plt.close()
+
+                    trace_list, traces = js_fold_line(raw_tprs, raw_fprs, aucs)
+                    trace_list, traces = js_mean_trace(mean_fpr, mean_tpr, mean_auc, std_auc, trace_list, traces)
+                    trace_list, traces = js_luck_trace(trace_list, traces)
+                    trace_list, traces = js_tpr_std(tprs_upper, tprs_lower, mean_fpr, trace_list, traces)
+
+                    js_construct_roc('ROCPLOT', 'rocplot%s_%s_%s_%s' % (nowtime, dataset, abbreviation, model_abv), trace_list, traces, '%s%s_%s_%s_gamma%s_roc.js' % (jspath, nowtime, kernel, model_name, gamma))
+
+            auc_mat.append(auc_mat_row)
 
     auc_mat = np.array(auc_mat)
+    print(auc_mat)
 
-    return(auc_mat, kpca_kernels, mdl_names)
+    return(auc_mat, kpca_kernel, mdl_name)
 
 # Find which element occurs most commonly in a 1D array
 def most_common(inp_list):

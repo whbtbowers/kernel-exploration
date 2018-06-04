@@ -34,7 +34,16 @@ nowdate = now.strftime("%Y-%m-%d")
 nowtime = now.strftime("%H-%M")
 
 # Name of script to trace where images came from
-scriptname = 'final2_2'
+scriptname = 'final2_3'
+
+#Create directory if directory does not exist
+filepath = '../../figs/out/%s/%s/' % (scriptname, nowdate)
+plotpath = '%splotly_js/' % filepath
+
+if not os.path.exists(filepath):
+    os.makedirs(filepath)
+if not os.path.exists(plotpath):
+    os.makedirs(plotpath)
 
 #List of datasets to test
 inp_dataset_list = [('Diabetes', 'diabetes'), ('Sex','sex'), ('Carotid Artery Calcification', 'cac_binomial'), ('Extreme Carotid Artery Calcification','cac_extremes'), ('Family History of Diabetes','family_hx_diabetes'), ('Parental history of CVD below age 65', 'parent_cvd_65_hx'), ('Family history of CVD', 'family_hx_cvd'), ('Blood Pressure Treatment', 'bp_treatment'), ('Diabetes Treatment', 'diabetes_treatment'), ('Lipids Treatment', 'lipids_treatment'), ('Plaque', 'plaque')]
@@ -57,12 +66,13 @@ for toy_label, toy_X in toy_dataset_list:
     print('\n##### Now running dataset %s through tier 1 #####' %toy_label)
 
     #Create directory if directory does not exist
-    filepath = '../../figs/out/%s/%s/%s/' % (scriptname, nowdate, toy_label)
-    plotpath = '%splotting/' % filepath
+    toy_filepath = '%s%s/tier1/' % (filepath, toy_label)
+    toy_plotpath = '%splotly_js/' % toy_filepath
 
-    if not os.path.exists(filepath):
-        os.makedirs(filepath)
-        os.makedirs(plotpath)
+    if not os.path.exists(toy_filepath):
+        os.makedirs(toy_filepath)
+    if not os.path.exists(toy_plotpath):
+        os.makedirs(toy_plotpath)
 
     toy_X_scaled = scale(toy_X)
 
@@ -95,7 +105,7 @@ for toy_label, toy_X in toy_dataset_list:
 
         amat_dict.update({gamma:[]})
 
-        t1_auc_mat, t1_kpcas, t1_models  = p2f.m_test5_2(toy_X_scaled, toy_y, gamma, toy_label, filepath, plotpath, 'tier1')
+        t1_auc_mat, t1_kpcas, t1_models  = p2f.m_test5_2(toy_X_scaled, toy_y, gamma, toy_label, toy_filepath, toy_plotpath, 'tier1')
 
         amat_dict[gamma].append(t1_auc_mat)
 
@@ -130,7 +140,7 @@ if t1_gamma_consensus == t1_gamma_list[-1]:
 # Create tier 2 gamma list
 gamma_i_t1 = t1_gamma_list.index(t1_gamma_consensus)
 t2_gamma_list = list(p2f.frange(t1_gamma_list[gamma_i_t1-1], t1_gamma_list[gamma_i_t1], t1_gamma_list[gamma_i_t1-1])) + list(p2f.frange(t1_gamma_list[gamma_i_t1], t1_gamma_list[gamma_i_t1+1], t1_gamma_list[gamma_i_t1]))
-#t2_gamma_list = [t1_gamma_list[gamma_i_t1]]
+# t2_gamma_list = [t1_gamma_list[gamma_i_t1]]
 
 
 #Dictionary of AUC matrices by gamma
@@ -142,6 +152,14 @@ opt_t2_gammas = []
 for toy_label, toy_X in toy_dataset_list:
 
     print('\n##### Now running dataset %s through Tier 2 #####' %toy_label)
+
+    toy_filepath = '%s%s/tier2/' % (filepath, toy_label)
+    toy_plotpath = '%splotly_js/' % toy_filepath
+
+    if not os.path.exists(toy_filepath):
+        os.makedirs(toy_filepath)
+    if not os.path.exists(toy_plotpath):
+        os.makedirs(toy_plotpath)
 
     # Dict of gammas w/ t1 Matrices
     amat_dict = dict()
@@ -161,11 +179,11 @@ for toy_label, toy_X in toy_dataset_list:
 
         amat_dict.update({gamma:[]})
 
-        t2_auc_mat, t2_kpcas, t2_models  = p2f.m_test5_2_rocplot(toy_X_scaled, toy_y, gamma, toy_label, filepath, plotpath, 'tier1')
+        t2_auc_mat, t2_kpcas, t2_models  = p2f.m_test5_2_rocplot(toy_X_scaled, toy_y, gamma, toy_label, toy_filepath, toy_plotpath, 'tier2')
 
         amat_dict[gamma].append(t2_auc_mat)
 
-        p2f.plot_mpl_heatmap(t2_auc_mat, t2_kpcas, t2_models, cmap="autumn", cbarlabel="Mean area under ROC curve after 10-fold cross validation", output='save', path='%s%s_tier2_heatmap_gamma_%s.png' % (filepath, nowtime, gamma))
+        p2f.plot_mpl_heatmap(t2_auc_mat, t2_kpcas, t2_models, cmap="autumn", cbarlabel="Mean area under ROC curve after 10-fold cross validation", output='save', path='%s%s_tier2_heatmap_gamma_%s.png' % (toy_filepath, nowtime, gamma))
 
         p2f.js_heatmap(t2_auc_mat, t2_kpcas, t2_models, "hmapgamma%s" % (gamma), "%s%sheatmap_gamma%s.js" % (plotpath, nowtime, gamma))
 
@@ -183,8 +201,6 @@ for toy_label, toy_X in toy_dataset_list:
     print("\n%.2f seconds elapsed so far.\n" % (time.time() - StartTime))
 
 # Find most frequent gamma value
-print('opt_t2_gammas:')
-print(opt_t2_gammas)
 t2_gamma_consensus = p2f.most_common(opt_t2_gammas)
 gamma_i_t2 = t2_gamma_list.index(t2_gamma_consensus)
 opt_gamma = t2_gamma_list[gamma_i_t2]
@@ -221,9 +237,18 @@ print("~~~~~~~~~~~~ REAL DATA ~~~~~~~~~~~~")
 #Declare lists to plot outcomes
 rds_labels = []
 rrun_aucs = []
-
+rrun_aucs_tolists = []
 
 for ds_label, dataset in inp_dataset_list:
+
+    #Create directory if directory does not exist
+    real_filepath = '%s%s/' % (filepath, ds_label)
+    real_plotpath = '%splotly_js/' % real_filepath
+
+    if not os.path.exists(real_filepath):
+        os.makedirs(real_filepath)
+    if not os.path.exists(real_plotpath):
+        os.makedirs(real_plotpath)
 
     rds_labels.append(ds_label)
 
@@ -231,23 +256,31 @@ for ds_label, dataset in inp_dataset_list:
     inp_df = pd.read_csv('../../data/mesa/MESA_CPMG_MBINV2_ManuallyBinnedData_BatchCorrected_LogTransformed_1stcol_%s.csv' % dataset, sep=',', header=None, index_col=0)
     X_imp = p2f.filt_imp(inp_df, 0.1)
     X, y = p2f.tsplit(X_imp)
-
-    rrun_mean_auc, rrun_kpca, rrun_model  = p2f.m_run5_3(X, y, opt_gamma, opt_kpca, opt_model, dataset, filepath, plotpath, 'rrun')
-
+    
+    print('opt_kpca: opt_model:')
+    print(opt_kpca, opt_model)
+    
+    rrun_mean_auc, rrun_kpca, rrun_model  = p2f.m_run5_3_rocplot(X, y, opt_gamma, opt_kpca, opt_model, dataset, real_filepath, real_plotpath, 'rrun')
+    
     rrun_aucs.append(rrun_mean_auc)
 
     print('After this run with %s followed by %s (γ = %s), mean auc is %s' % (rrun_kpca, rrun_model, opt_gamma, rrun_mean_auc[0][0]))
 
+
     print("\n%.2f seconds elapsed so far\n" % (time.time() - StartTime))
     print('\n###################################################################\n')
 
-print('rrun_aucs:')
-print(rrun_aucs[0][0])
+# Remove auc from array
+for i in rrun_aucs:
+    rrun_aucs_tolists = rrun_aucs_tolists + i[0].tolist()
 
-p2f.mpl_simplebar(rds_labels, rrun_aucs[0][0], 'Target outcome', 'Mean AUC', p2f.get_col_list('autumn', len(rds_labels)), output='save', path='%s%s_summarybars.png' % (filepath, nowtime))
-p2f.js_bars(rds_labels, rrun_aucs[0][0], '%s%s_summarybars.js' % (plotpath, nowtime))
+p2f.mpl_simplebar(rds_labels, rrun_aucs_tolists, 'Target outcome', 'Mean AUC', p2f.get_col_list('autumn', len(rds_labels)), output='save', path='%s%s_summarybars.png' % (filepath, nowtime))
+p2f.js_bars(rds_labels, rrun_aucs_tolists, '%s%s_summarybars.js' % (plotpath, nowtime))
 
 print("\n!!! SUCCESSFUL RUN !!!\n")
 
 #Calculate and display time taken or script to run
-print("\nTime taken for script to run is %.2f seconds\n" % (time.time() - StartTime))
+EndTime = time.time() - StartTime
+print("\nTime taken for script to run is %.2f seconds\n" % (EndTime))
+
+p2f.endalert('final2_3 successfully completed', "Hey me,\n\nIt's pretty cool because it's successfully finished It took %.2f seconds.\n\nMuch love,\n\nMe" % EndTime)
