@@ -58,13 +58,17 @@ for i in range(len(y_list)):
 
     X_rows, X_cols =  X.shape
 
-    gamma = 1/X_cols
+    def_gamma = 1/X_cols
 
-    auc_mat, kpcas, models  = p2f.m_test5_2_rocplot(X, y, gamma, ds_label, filepath, plotpath, 'sizetest')
+    gamma_list = [def_gamma/100, def_gamma/10, def_gamma]
 
-    p2f.plot_mpl_heatmap(auc_mat, kpcas, models, cmap="autumn", cbarlabel="Mean area under ROC curve after 10-fold cross validation", output='save', path='%s%s_tier2_heatmap_gamma_%s.png' % (filepath, nowtime, gamma))
+    for gamma in gamma_list:
+        
+        auc_mat, kpcas, models  = p2f.m_test5_2_rocplot(X, y, gamma, ds_label, filepath, plotpath, 'gamma_%s' %gamma)
 
-    p2f.js_heatmap(auc_mat, kpcas, models, "hmapgamma%s" % (gamma), "%s%sheatmap_gamma%s.js" % (plotpath, nowtime, gamma))
+        p2f.plot_mpl_heatmap(auc_mat, kpcas, models, cmap="autumn", cbarlabel="Mean area under ROC curve after 10-fold cross validation", output='save', path='%s%s_tier2_heatmap_gamma_%s.png' % (filepath, nowtime, gamma))
+
+        p2f.js_heatmap(auc_mat, kpcas, models, "hmapgamma%s" % (gamma), "%s%sheatmap_gamma%s.js" % (plotpath, nowtime, gamma))
 
 #Calculate and display time taken or script to run
 print("\nTime taken for script to run is %.2f seconds\n" % (time.time() - StartTime))
