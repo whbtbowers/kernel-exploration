@@ -27,5 +27,7 @@ data = [trace1, trace2];
 layout = {
   title: 'First 2 principal components of MESA data using diabetes outcome',
 };
-
-Plotly.plot(SCATTER, data, layout);
+Plotly.plot(SCATTER, {
+  data: data,
+  layout: layout
+});

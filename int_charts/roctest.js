@@ -18,6 +18,7 @@ var trace2 = {
   name: 'Mean ±1 standard deviation',
   line:{
       width: 0,
+      color:'#ffffff',
   },
   fill:'tonexty',
   mode: 'lines',
@@ -73,7 +74,8 @@ var trace4 = {
          1.        ],
          name: 'ROC fold 1',
          line:{
-             width: 2,
+            color:'#8000ff',
+            width: 2,
          },
          type: 'scatter'
 };
@@ -113,6 +115,7 @@ var trace5 = {
   0.99410029, 0.99410029, 0.99705015, 0.99705015, 1.        ],
   name: 'ROC fold 2',
   line:{
+    color:'#4757fb',
       width: 2,
   },
   type: 'scatter'
@@ -162,6 +165,7 @@ var trace6 = {
   name: 'ROC fold 3',
   line:{
       width: 2,
+      color:'#0ea4f0',
   },
   type: 'scatter'
 };
@@ -210,6 +214,7 @@ var trace7 = {
   name: 'ROC fold 4',
   line:{
       width: 2,
+      color:'#2adddd',
   },
   type: 'scatter'
 };
@@ -256,6 +261,7 @@ var trace8 = {
   name: 'ROC fold 5',
   line:{
       width: 2,
+      color:'#63fbc3',
   },
   type: 'scatter'
 };
@@ -300,6 +306,7 @@ var trace9 = {
   name: 'ROC fold 6',
   line:{
       width: 2,
+      color:'#9cfba4',
   },
   type: 'scatter'
 };
@@ -346,6 +353,7 @@ var trace10 = {
   name: 'ROC fold 7',
   line:{
       width: 2,
+      color:'#d4dd80',
   },
   type: 'scatter'
 };
@@ -396,6 +404,7 @@ var trace11 = {
   name: 'ROC fold 8',
   line:{
       width: 2,
+      color: '#ffa457',
   },
   type: 'scatter'
 };
@@ -432,6 +441,7 @@ var trace12 = {
   name: 'ROC fold 9',
   line:{
       width: 2,
+      color: '#ff572c',
   },
   type: 'scatter'
 };
@@ -476,6 +486,7 @@ var trace13 = {
   name: 'ROC fold 10',
   line:{
       width: 2,
+      color: '#ff0000',
   },
   type: 'scatter'
 };
@@ -497,12 +508,34 @@ var trace14 = {
 var data = [trace1, trace2, trace3, trace4, trace5, trace6, trace7, trace8, trace9, trace10, trace11, trace12, trace13, trace14,];
 
 var layout = {
-    xaxis: {
-        zeroline: false
+
+	paper_bgcolor: '#2e3141',
+	plot_bgcolor: '#2e3141',
+	xaxis: {
+    color: '#ffffff',
+		title: 'False positive rate',
+		titlefont: {
+			family: 'Courier New, monospace',
+			size: 18,
+			color: '#ffffff'
+		},
+		zeroline: true
+	},
+	yaxis: {
+    color: '#ffffff',
+		title: 'True positive rate',
+		titlefont: {
+			family: 'Courier New, monospace',
+			size: 18,
+			color: '#ffffff'
+		},
+		zeroline: true
+	},
+  legend: {
+    font: {
+      color: '#ffffff'
     },
-    yaxis: {
-        zeroline: false
-    },
+  },
 };
 
 Plotly.newPlot(ROCTEST, data, layout);

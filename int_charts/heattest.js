@@ -10,21 +10,21 @@ trace1 = {
       [0.7, 1.7, 0.6, 2.6, 2.2, 6.2, 0.0],
       [1.3, 1.2, 0.0, 0.0, 0.0, 3.2, 5.1],
       [0.1, 2.0, 0.0, 1.4, 0.0, 1.9, 6.3]],
-  colorscale: [['0.7', 'rgb(158,1,66)'], ['1.4', 'rgb(213,62,79)'], ['2.1', 'rgb(244,109,67)'], ['2.8', 'rgb(253,174,97)'], ['3.5', 'rgb(254,224,139)'], ['4.2', 'rgb(255,255,191)'], ['4.9', 'rgb(230,245,152)'], ['5.6', 'rgb(171,221,164)'], ['6.3', 'rgb(102,194,165)'], ['7.0', 'rgb(50,136,189)'], ['7.7', 'rgb(94,79,162)']],
+  colorscale: 'YIOrRd',
   type: 'heatmap',
   colorbar:{
-      title:'Colorbar label',
+      title:'Mean area under ROC curve',
       titleside:'right',
   }
 };
 data = [trace1];
 layout = {
   legend: {
-    bgcolor: '#F5F6F9',
+    bgcolor: '#FFFFFF',
     font: {color: '#4D5663'}
   },
-  paper_bgcolor: '#F5F6F9',
-  plot_bgcolor: '#F5F6F9',
+  paper_bgcolor: '#FFFFFF',
+  plot_bgcolor: '#FFFFFF',
   xaxis1: {
     gridcolor: '#E1E5ED',
     tickfont: {color: '#4D5663'},
