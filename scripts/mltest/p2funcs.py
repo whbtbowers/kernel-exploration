@@ -786,12 +786,12 @@ def m_test5_2_rocplot(X, y, gamma, dataset, filepath, jspath, signifier):
             plt.savefig('%s%sroc_%s_%s_%s_gamma%s.png' % (filepath, nowtime, abbreviation, model_abv, signifier, gamma))
             plt.close()
 
-            trace_list, traces = js_fold_line(raw_tprs, raw_fprs, aucs)
+            trace_list, traces = js_fold_line(raw_fprs, raw_tprs, aucs)
             trace_list, traces = js_mean_trace(mean_fpr, mean_tpr, mean_auc, std_auc, trace_list, traces)
             trace_list, traces = js_luck_trace(trace_list, traces)
             trace_list, traces = js_tpr_std(tprs_upper, tprs_lower, mean_fpr, trace_list, traces)
 
-            js_construct_roc('ROCPLOT', 'rocplot%s_%s_%s_%s' % (nowtime, dataset, abbreviation, model_abv), trace_list, traces, '%s%s_%s_%s_gamma%s_roc.js' % (jspath, nowtime, kernel, model_name, gamma))
+            js_construct_roc('ROCPLOT', 'rocplot%s_%s_%s_%s' % (nowtime, dataset, abbreviation, model_abv), trace_list, traces, '%s%s_%s_%s_gamma%s_roc.js' % (jspath, nowtime, abbreviation, model_abv, gamma))
 
         auc_mat.append(auc_mat_row)
 
@@ -1014,13 +1014,12 @@ def m_run5_3_rocplot(X, y, gamma, opt_kernel, opt_model, dataset, filepath, jspa
 
                     #Initiate plot
                     fig = plt.figure(figsize=(15, 9))
-
+        
                     for train, test in cv.split(X_kpca, y):
-
+        
                         probas_ = model.fit(X_kpca[train], y[train]).predict_proba(X_kpca[test])
-
+        
                         # Compute ROC curve and area the curve
-
                         fpr, tpr, thresholds = roc_curve(y[test], probas_[:, 1])
                         tprs.append(interp(mean_fpr, fpr, tpr))
                         tprs[-1][0] = 0.0
@@ -1030,29 +1029,27 @@ def m_run5_3_rocplot(X, y, gamma, opt_kernel, opt_model, dataset, filepath, jspa
                         aucs.append(roc_auc)
                         plt.plot(fpr, tpr, lw=1, alpha=0.3,
                                  label='ROC fold %d (AUC = %0.2f)' % (i+1, roc_auc))
-
+        
                         i += 1
-
+        
                     plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r',
                              label='Luck', alpha=.8)
-
+        
                     mean_tpr = np.mean(tprs, axis=0)
                     mean_tpr[-1] = 1.0
                     mean_auc = auc(mean_fpr, mean_tpr)
                     auc_mat_row.append(mean_auc)
-                    print('mean_auc:')
-                    print(mean_auc)
                     std_auc = np.std(aucs)
                     plt.plot(mean_fpr, mean_tpr, color='b',
                              label=r'Mean ROC (AUC = %0.2f $\pm$ %0.2f)' % (mean_auc, std_auc),
                              lw=2, alpha=.8)
-
+        
                     std_tpr = np.std(tprs, axis=0)
                     tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
                     tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
                     plt.fill_between(mean_fpr, tprs_lower, tprs_upper, color='grey', alpha=.2,
                                      label=r'$\pm$ 1 std. dev.')
-
+        
                     plt.xlim([-0.05, 1.05])
                     plt.ylim([-0.05, 1.05])
                     plt.xlabel('False Positive Rate')
@@ -1068,7 +1065,7 @@ def m_run5_3_rocplot(X, y, gamma, opt_kernel, opt_model, dataset, filepath, jspa
                     trace_list, traces = js_luck_trace(trace_list, traces)
                     trace_list, traces = js_tpr_std(tprs_upper, tprs_lower, mean_fpr, trace_list, traces)
 
-                    js_construct_roc('ROCPLOT', 'rocplot%s_%s_%s_%s' % (nowtime, dataset, abbreviation, model_abv), trace_list, traces, '%s%s_%s_%s_gamma%s_roc.js' % (jspath, nowtime, kernel, model_name, gamma))
+                    js_construct_roc('ROCPLOT', 'rocplot%s_%s_%s_%s' % (nowtime, dataset, abbreviation, model_abv), trace_list, traces, '%s%s_%s_%s_%s_gamma%s_roc.js' % (jspath, nowtime, dataset, kernel, model_name, gamma))
 
             auc_mat.append(auc_mat_row)
 
@@ -1091,16 +1088,18 @@ def js_fold_line(x_vals_list, y_vals_list, aucs):
     #Declare trace list for calling on data
     trace_list = []
     traces = []
-
+    #To make numbering of reads in legend look nice
+    trinv= list(reversed(list(range(len(x_vals_list)))))
+    
     for i in range(len(x_vals_list)):
 
-        trace = 'trace%s' % str(i+1)
+        trace = 'trace%s' % str(i+4)
         trace_list.append(trace)
         open_trace = 'var %s = {' % trace
         close_trace = "\n\ttype: 'scatter'\n};\n\n"
         trace_x = '\n\tx: ' + str(x_vals_list[i].tolist()) + ','
         trace_y = '\n\ty: ' + str(y_vals_list[i].tolist()) + ','
-        leg_name = "\n\tname: 'ROC fold %s (AUC = %0.2s)'," % (str(i+4), aucs[i])
+        leg_name = "\n\tname: 'ROC fold %s (AUC = %0.2f)'," % (trinv[i] + 1, aucs[i])
         line = "\n\tline:{\n\t\twidth: 2,\n\t},"
         full_trace = open_trace + trace_x + trace_y +  leg_name + line + close_trace
         traces.append(full_trace)
@@ -1113,7 +1112,7 @@ def js_mean_trace(mean_x, mean_y, mean_auc, std_auc, trace_list, traces):
     trace_list.append(mean_trace)
     mean_trace_x = '\n\tx: ' + str(mean_x.tolist()) + ','
     mean_trace_y = '\n\ty: ' + str(mean_y.tolist()) + ','
-    mean_trace_close ="\n\tname: 'Mean (AUC = %0.2s ± %0.2s)',\n\tline: {\n\t\tcolor: 'rgb(0, 0, 225)',\n\t\twidth: 8,\n\t},\n\tmode: 'lines',\n\ttype: 'scatter'\n};" % (mean_auc, std_auc)
+    mean_trace_close ="\n\tname: 'Mean (AUC = %0.2f ± %0.2f)',\n\tline: {\n\t\tcolor: 'rgb(0, 0, 225)',\n\t\twidth: 8,\n\t},\n\tmode: 'lines',\n\ttype: 'scatter'\n};" % (mean_auc, std_auc)
     mean_trace_full = "var %s = {%s%s%s" % (mean_trace, mean_trace_x, mean_trace_y, mean_trace_close)
     traces.append(mean_trace_full)
 
@@ -1138,6 +1137,12 @@ def js_construct_roc(chartname, divname, trace_list, traces, path):
     plot_write('\nvar data = %s;\n' % str(tl_stripped), path)
     plot_write("var layout = {\n\txaxis: {\n\t\ttitle: 'False positive rate',\n\t\ttitlefont: {\n\t\t\tfamily: 'Courier New, monospace',\n\t\t\tsize: 18,\n\t\t\tcolor: '#7f7f7f'\n\t\t},\n\t\tzeroline: true\n\t},\n\tyaxis: {\n\t\ttitle: 'True positive rate',\n\t\ttitlefont: {\n\t\t\tfamily: 'Courier New, monospace',\n\t\t\tcolor: '#7f7f7f'\n\t\t},\n\t\tzeroline: true\n\t},\n};\n\n", path)
     plot_write('Plotly.newPlot(%s, data, layout);' % chartname, path)
+    #print("%s = document.getElementById('%s');\n\n" % (chartname, divname))
+    #for trace in traces:
+    #    print(trace)
+    #print('\nvar data = %s;\n' % str(tl_stripped))
+    #print("var layout = {\n\txaxis: {\n\t\ttitle: 'False positive rate',\n\t\ttitlefont: {\n\t\t\tfamily: 'Courier New, monospace',\n\t\t\tsize: 18,\n\t\t\tcolor: '#7f7f7f'\n\t\t},\n\t\tzeroline: true\n\t},\n\tyaxis: {\n\t\ttitle: 'True positive rate',\n\t\ttitlefont: {\n\t\t\tfamily: 'Courier New, monospace',\n\t\t\tcolor: '#7f7f7f'\n\t\t},\n\t\tzeroline: true\n\t},\n};\n\n")
+    #print('Plotly.newPlot(%s, data, layout);' % chartname)
 
 def js_luck_trace(trace_list, traces):
 
@@ -1256,7 +1261,7 @@ def js_heatmap(data, X_labels, Y_labels, divname, path):
     plot_write("HEATMAP = document.getElementById('%s');\n\nvar trace1 = {\n\tx: %s,\n\ty: %s,\n\tz: %s,\n\tcolorscale: 'YIOrRd',\n\ttype: 'heatmap',\n\tcolorbar:{\n\t\ttitle:'Mean area under ROC curve after 10-flod cross validation',\n\t\ttitleside:'right',\n\t},\n};\n\nvar data = [trace1];\n\nvar layout = {\n\tlegend: {\n\t\tbgcolor: '#FFFFFF',\n\t\tfont: {color: '#4D5663'}\n\t},\n\tpaper_bgcolor: '#FFFFFF',\n\tplot_bgcolor: '#FFFFFF',\n\txaxis1: {\n\t\tgridcolor: '#E1E5ED',\n\t\ttickfont: {color: '#4D5663'},\n\t\ttitle: '',\n\t\ttitlefont: {color: '#4D5663'},\n\t\tzerolinecolor: '#E1E5ED'\n\t},\n\tyaxis1: {\n\t\tgridcolor: '#E1E5ED',\n\t\ttickfont: {color: '#4D5663'},\n\t\ttitle: '',\n\t\ttitlefont: {color: '#4D5663'},\n\t\tzeroline: false,\n\t\tzerolinecolor: '#E1E5ED'\n\t}\n};\n\nPlotly.plot(HEATMAP, data, layout);" % (divname, X_labels, Y_labels, str(data.tolist())), path)
 
 def js_bars(X_data, Y_data, path):
-    plot_write("var summBar = document.getElementById('summary-bar');\n\nvar x = %s;\nvar y = %s;\n\nvar trace1 = {\n\tx:x,\n\ty:y,\n\tmarker: {\n\t\tcolor: col_list,\n\t\tline: {\n\t\t\twidth: 1.0\n\t\t}/n/t},/n/topacity: 1,\n\torientation: 'v',\n\ttype: 'bar',\n\txaxis: 'x1',\n\tyaxis: 'y1'\n};\n\nvar data = [trace1];\n\nPlotly.plot(summBar, data);\n\nvar strList = INSERT ABV LIST;\n\n simpBar.on('plotly_click', function(data){\n\tvar char = x.indexOf(data.points[0].x);\n\tvar corr = strList[char];\n\twindow.open('GIVE HTML');\n});" % (X_data, Y_data), path)
+    plot_write("var summBar = document.getElementById('summary-bar');\n\nvar x = %s;\nvar y = %s;\n\nvar trace1 = {\n\tx:x,\n\ty:y,\n\tmarker: {\n\t\tcolor: col_list,\n\t\tline: {\n\t\t\twidth: 1.0\n\t\t}/n/t},/n/topacity: 1,\n\torientation: 'v',\n\ttype: 'bar',\n\txaxis: 'x1',\n\tyaxis: 'y1'\n};\n\nvar data = [trace1];\n\nPlotly.plot(summBar, data);\n\nvar strList = INSERT ABV LIST;\n\n summBar.on('plotly_click', function(data){\n\tvar char = x.indexOf(data.points[0].x);\n\tvar corr = strList[char];\n\twindow.open('GIVE HTML');\n});" % (X_data, Y_data), path)
 
 def mpl_simplebar(x, y, xlab, ylab, col_list, output=None, path=None):
 
